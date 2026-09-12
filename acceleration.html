@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acceleration</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; min-height: 100vh; padding: 20px; }
+    .container { max-width: 900px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); padding: 24px; }
+    h1 { text-align: center; color: #333; margin-bottom: 20px; font-size: 1.8rem; }
+    .controls { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; justify-content: center; margin-bottom: 16px; padding: 16px; background: #fafafa; border-radius: 8px; }
+    .control-section { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: #fafafa; border-radius: 8px; min-width: 280px; }
+    .control-section h3 { margin: 0 0 8px; color: #333; font-size: 1rem; text-align: center; }
+    .control-group { display: flex; align-items: center; gap: 8px; }
+    .control-group label { font-weight: 600; color: #555; min-width: 100px; }
+    .control-group input[type="number"] { width: 100px; padding: 8px 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 1rem; text-align: center; }
+    .control-group input[type="number"]:focus { outline: none; border-color: #4a90d9; }
+    .control-group input[type="number"]:disabled { background: #f5f5f5; color: #999; }
+    .btn-group { display: flex; gap: 8px; align-items: flex-end; }
+    .info-panel { overflow-x: auto; padding: 8px 4px; background: #e8f0fe; border-radius: 8px; margin-bottom: 12px; }
+    .velocity-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 600px; }
+    .velocity-table th, .velocity-table td { border: 1px solid #ddd; padding: 4px 6px; text-align: center; min-width: 48px; }
+    .velocity-table th { background: #f0f0f0; font-weight: 600; color: #333; }
+    .velocity-table .row-label { text-align: left; font-weight: 600; color: #333; background: #fafafa; }
+    .velocity-table td { color: #555; font-variant-numeric: tabular-nums; }
+    .velocity-table .boy-row { background: #e8f0fe; }
+    .velocity-table .girl-row { background: #fce4ec; }
+    .btn { padding: 10px 20px; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-step { background: #4a90d9; color: white; }
+    .btn-step:hover:not(:disabled) { background: #357abd; }
+    .btn-play { background: #28a745; color: white; }
+    .btn-play:hover:not(:disabled) { background: #218838; }
+    .btn-pause { background: #ffc107; color: #333; }
+    .btn-pause:hover:not(:disabled) { background: #e0a800; }
+    .btn-reset { background: #6c757d; color: white; }
+    .btn-reset:hover:not(:disabled) { background: #5a6268; }
+    .nav-bar { display: inline-block; padding: 8px 16px; background: #4a90d9; color: white; border-radius: 6px; text-decoration: none; font-size: 0.9rem; }
+    .nav-bar:hover { background: #357abd; }
+    .canvas-wrapper { position: relative; }
+    canvas { display: block; width: 100%; height: auto; border: 2px solid #eee; border-radius: 8px; background: #fafafa; }
+    .track-labels { display: flex; justify-content: space-between; padding: 8px 4px; font-size: 0.85rem; color: #888; }
+    .origin-label { color: #666; font-weight: 600; }
+    .legend { display: flex; gap: 24px; justify-content: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid #eee; }
+    .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: #555; }
+    .legend-arrow { width: 40px; height: 4px; position: relative; }
+    .legend-arrow::after { content: ''; position: absolute; right: 0; top: -4px; width: 0; height: 0; border-left: 8px solid; border-top: 4px solid transparent; border-bottom: 4px solid transparent; }
+    .legend-arrow.v { background: #4a90d9; }
+    .legend-arrow.v::after { border-left-color: #4a90d9; }
+    .legend-arrow.a { background: #dc3545; }
+    .legend-arrow.a::after { border-left-color: #dc3545; }
+    .legend-arrow.gv { background: #e91e63; }
+    .legend-arrow.gv::after { border-left-color: #e91e63; }
+    .legend-arrow.ga { background: #ff9800; }
+    .legend-arrow.ga::after { border-left-color: #ff9800; }
+  </style>
+</head>
+<body>
+  <nav style="text-align:center; padding:16px 0;">
+    <a href="index.html" class="nav-bar">← Back to Home</a>
+  </nav>
+  <div class="container">
+    <h1>Acceleration</h1>
+    
+    <div class="controls">
+      <div class="control-section">
+        <h3>Bob</h3>
+        <div class="control-group">
+          <label for="velInput">Velocity:</label>
+          <input type="number" id="velInput" min="-20" max="20" step="0.1" value="0">
+          <span>m/s</span>
+        </div>
+        <div class="control-group">
+          <label for="accelInput">Acceleration:</label>
+          <input type="number" id="accelInput" min="-10" max="10" step="0.1" value="0">
+          <span>m/s²</span>
+        </div>
+      </div>
+      <div class="control-section">
+        <h3>Alice</h3>
+        <div class="control-group">
+          <label for="girlVelInput">Velocity:</label>
+          <input type="number" id="girlVelInput" min="-20" max="20" step="0.1" value="0">
+          <span>m/s</span>
+        </div>
+        <div class="control-group">
+          <label for="girlAccelInput">Acceleration:</label>
+          <input type="number" id="girlAccelInput" min="-10" max="10" step="0.1" value="0">
+          <span>m/s²</span>
+        </div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-step" id="btnStep">Step 1s</button>
+        <button class="btn btn-play" id="btnPlay">Play</button>
+        <button class="btn btn-pause" id="btnPause" style="display:none;">Pause</button>
+        <button class="btn btn-reset" id="btnReset">Reset</button>
+      </div>
+    </div>
+
+    <div class="info-panel">
+      <table id="velocityTable" class="velocity-table">
+        <thead>
+          <tr>
+            <th>Time (s)</th>
+            <th>0s</th><th>1s</th><th>2s</th><th>3s</th><th>4s</th>
+            <th>5s</th><th>6s</th><th>7s</th><th>8s</th><th>9s</th><th>10s</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="boy-row">
+            <td class="row-label">Bob v (m/s)</td>
+            <td id="boy-v-0">—</td><td id="boy-v-1">—</td><td id="boy-v-2">—</td>
+            <td id="boy-v-3">—</td><td id="boy-v-4">—</td><td id="boy-v-5">—</td>
+            <td id="boy-v-6">—</td><td id="boy-v-7">—</td><td id="boy-v-8">—</td>
+            <td id="boy-v-9">—</td><td id="boy-v-10">—</td>
+          </tr>
+          <tr class="girl-row">
+            <td class="row-label">Alice v (m/s)</td>
+            <td id="girl-v-0">—</td><td id="girl-v-1">—</td><td id="girl-v-2">—</td>
+            <td id="girl-v-3">—</td><td id="girl-v-4">—</td><td id="girl-v-5">—</td>
+            <td id="girl-v-6">—</td><td id="girl-v-7">—</td><td id="girl-v-8">—</td>
+            <td id="girl-v-9">—</td><td id="girl-v-10">—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="canvas-wrapper">
+      <canvas id="canvas" width="800" height="400"></canvas>
+    </div>
+    
+    <div class="track-labels">
+      <span>-50 m</span>
+      <span class="origin-label">0 m</span>
+      <span>+50 m</span>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-arrow v"></div>
+        <span>Bob Velocity (v)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-arrow a"></div>
+        <span>Bob Acceleration (a)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-arrow gv"></div>
+        <span>Alice Velocity (v)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-arrow ga"></div>
+        <span>Alice Acceleration (a)</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============ CONFIGURATION ============
+    const CANVAS_WIDTH = 800;
+    const CANVAS_HEIGHT = 400;
+    const LANE_Y_BOY = 100;
+    const LANE_Y_GIRL = 200;
+    const LANE_Y = [LANE_Y_BOY, LANE_Y_GIRL];
+    const SCALE = 8; // pixels per meter
+    const HALF_TRACK = 50; // meters from origin to edge
+    const ORIGIN_X = CANVAS_WIDTH / 2; // 400px = 0m
+    const MAX_VEL = 20;
+    const MAX_ACCEL = 10;
+    const VEL_ARROW_SCALE = 10; // px per m/s
+    const ACCEL_ARROW_SCALE = 20; // px per m/s²
+    const MAX_ARROW_LENGTH = 200; // max visual arrow length
+    const GIRL_VEL_COLOR = '#e91e63';  // Pink
+    const GIRL_ACCEL_COLOR = '#ff9800'; // Orange
+
+    // ============ STATE ============
+    let simTime = 0;
+    // Boy state
+    let pos = 0; // meters
+    let vel = 0; // m/s
+    let accel = 0; // m/s²
+    let facing = 'front'; // 'left' | 'right' | 'front'
+    // Girl state
+    let girlPos = 0;
+    let girlVel = 0;
+    let girlAccel = 0;
+    let girlFacing = 'front';
+    // Shared
+    let isPlaying = false;
+    let lastFrameTime = 0;
+    let animationId = null;
+    // Velocity-time table
+    let velocityTable = { boy: {}, girl: {} };
+    let lastRecordedTime = -1;
+
+    // ============ DOM ELEMENTS ============
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const velInput = document.getElementById('velInput');
+    const accelInput = document.getElementById('accelInput');
+    const girlVelInput = document.getElementById('girlVelInput');
+    const girlAccelInput = document.getElementById('girlAccelInput');
+    // const timeDisplay = document.getElementById('timeDisplay'); // REMOVED
+    // const velDisplay = document.getElementById('velDisplay'); // REMOVED
+    // const accelDisplay = document.getElementById('accelDisplay'); // REMOVED
+    // const posDisplay = document.getElementById('posDisplay'); // REMOVED
+    // const girlVelDisplay = document.getElementById('girlVelDisplay'); // REMOVED
+    // const girlAccelDisplay = document.getElementById('girlAccelDisplay'); // REMOVED
+    // const girlPosDisplay = document.getElementById('girlPosDisplay'); // REMOVED
+    const btnStep = document.getElementById('btnStep');
+    const btnPlay = document.getElementById('btnPlay');
+    const btnPause = document.getElementById('btnPause');
+    const btnReset = document.getElementById('btnReset');
+
+    // ============ DRAWING FUNCTIONS ============
+    function drawTrack() {
+      // Draw track for both lanes
+      for (const y of LANE_Y) {
+        // Track background - split left/right of origin
+        ctx.fillStyle = '#e8f0fe';
+        ctx.fillRect(0, y - 30, ORIGIN_X, 60);
+        ctx.fillStyle = '#fff3e0';
+        ctx.fillRect(ORIGIN_X, y - 30, ORIGIN_X, 60);
+        
+        // Track center line
+        ctx.strokeStyle = '#ccc';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([10, 10]);
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(CANVAS_WIDTH, y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        // Origin line
+        ctx.strokeStyle = '#666';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(ORIGIN_X, y - 35);
+        ctx.lineTo(ORIGIN_X, y + 35);
+        ctx.stroke();
+        ctx.lineWidth = 1;
+        
+        // Distance markers every 10m
+        ctx.fillStyle = '#999';
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'center';
+        for (let m = -HALF_TRACK; m <= HALF_TRACK; m += 10) {
+          const x = ORIGIN_X + m * SCALE;
+          ctx.beginPath();
+          ctx.moveTo(x, y - 35);
+          ctx.lineTo(x, y + 35);
+          ctx.strokeStyle = '#ddd';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          const label = m === 0 ? '0' : (m > 0 ? `+${m}` : `${m}`);
+          ctx.fillText(`${label}m`, x, y + 50);
+        }
+      }
+      ctx.textAlign = 'start';
+    }
+
+    function drawCharacter(x, y, isBoy, facing) {
+      // facing: 'left' | 'right' | 'front'
+      const dir = facing === 'right' ? 1 : (facing === 'left' ? -1 : 0);
+      const centerX = x;
+      const centerY = y;
+      
+      // Colors
+      const skinColor = '#FFDBAC';
+      const hairColor = isBoy ? '#8B4513' : '#5D3A1A';
+      const shirtColor = isBoy ? '#4a90d9' : '#e91e63';
+      const pantsColor = isBoy ? '#3D3D3D' : '#e91e63';
+      const shoeColor = '#222';
+
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      
+      // Body proportions
+      const headRadius = 14;
+      const torsoWidth = 24;
+      const torsoHeight = 28;
+      const legLength = 22;
+      const armLength = 20;
+
+      // Legs
+      ctx.fillStyle = pantsColor;
+      if (dir === 0) {
+        // Front view - both legs side by side
+        ctx.fillRect(-10, torsoHeight / 2, 10, legLength);
+        ctx.fillRect(0, torsoHeight / 2, 10, legLength);
+        // Shoes
+        ctx.fillStyle = shoeColor;
+        ctx.fillRect(-12, torsoHeight / 2 + legLength - 4, 14, 6);
+        ctx.fillRect(-2, torsoHeight / 2 + legLength - 4, 14, 6);
+      } else {
+        // Profile view
+        ctx.beginPath();
+        ctx.moveTo(-dir * 6, torsoHeight / 2);
+        ctx.lineTo(-dir * 6, torsoHeight / 2 + legLength);
+        ctx.lineTo(-dir * 14, torsoHeight / 2 + legLength);
+        ctx.lineTo(-dir * 14, torsoHeight / 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(dir * 6, torsoHeight / 2);
+        ctx.lineTo(dir * 6, torsoHeight / 2 + legLength);
+        ctx.lineTo(dir * 14, torsoHeight / 2 + legLength);
+        ctx.lineTo(dir * 14, torsoHeight / 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = shoeColor;
+        ctx.fillRect(-dir * 14, torsoHeight / 2 + legLength - 4, dir * 8, 6);
+        ctx.fillRect(dir * 6, torsoHeight / 2 + legLength - 4, dir * 8, 6);
+      }
+
+      // Torso
+      ctx.fillStyle = shirtColor;
+      if (dir === 0) {
+        ctx.fillRect(-torsoWidth / 2, -torsoHeight / 2, torsoWidth, torsoHeight);
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(-dir * torsoWidth / 2, -torsoHeight / 2);
+        ctx.lineTo(dir * torsoWidth / 2, -torsoHeight / 2);
+        ctx.lineTo(dir * torsoWidth / 2, torsoHeight / 2);
+        ctx.lineTo(-dir * torsoWidth / 2, torsoHeight / 2);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // Arms
+      ctx.fillStyle = skinColor;
+      ctx.strokeStyle = skinColor;
+      ctx.lineWidth = 6;
+      if (dir === 0) {
+        ctx.beginPath();
+        ctx.moveTo(-torsoWidth / 2, -torsoHeight / 2 + 8);
+        ctx.lineTo(-torsoWidth / 2 - armLength, -torsoHeight / 2 + 8);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(torsoWidth / 2, -torsoHeight / 2 + 8);
+        ctx.lineTo(torsoWidth / 2 + armLength, -torsoHeight / 2 + 8);
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(-dir * torsoWidth / 2, -torsoHeight / 2 + 6);
+        ctx.lineTo(-dir * (torsoWidth / 2 + armLength), -torsoHeight / 2 + 6);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(dir * torsoWidth / 2, -torsoHeight / 2 + 6);
+        ctx.lineTo(dir * (torsoWidth / 2 + armLength), -torsoHeight / 2 + 6);
+        ctx.stroke();
+      }
+
+      // Neck
+      ctx.fillStyle = skinColor;
+      if (dir === 0) {
+        ctx.fillRect(-6, -torsoHeight / 2 - 6, 12, 6);
+      } else {
+        ctx.fillRect(-dir * 8, -torsoHeight / 2 - 6, 16, 6);
+      }
+
+      // Head
+      ctx.fillStyle = skinColor;
+      ctx.beginPath();
+      ctx.arc(0, -torsoHeight / 2 - headRadius - 2, headRadius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Hair
+      ctx.fillStyle = hairColor;
+      if (dir === 0) {
+        // Front view
+        if (isBoy) {
+          // Boy - symmetrical short hair
+          ctx.beginPath();
+          ctx.arc(0, -torsoHeight / 2 - headRadius - 2, headRadius + 2, Math.PI, 0);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(0, -torsoHeight / 2 - headRadius - 2, headRadius + 1, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          // Girl - long hair both sides
+          ctx.beginPath();
+          ctx.arc(0, -torsoHeight / 2 - headRadius - 2, headRadius + 3, Math.PI, 0);
+          ctx.fill();
+          // Hair falling on both sides
+          ctx.beginPath();
+          ctx.ellipse(-headRadius - 2, -torsoHeight / 2 - headRadius + 5, 6, 15, 0, 0, Math.PI * 2);
+          ctx.ellipse(headRadius + 2, -torsoHeight / 2 - headRadius + 5, 6, 15, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else {
+        // Profile view
+        if (isBoy) {
+          // Boy - short hair
+          ctx.beginPath();
+          ctx.arc(0, -torsoHeight / 2 - headRadius - 2, headRadius + 2, Math.PI, 0);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(0, -torsoHeight / 2 - headRadius - 2, headRadius + 1, 0, Math.PI);
+          ctx.fill();
+        } else {
+          // Girl - long hair with ponytail
+          ctx.beginPath();
+          ctx.arc(0, -torsoHeight / 2 - headRadius - 2, headRadius + 3, Math.PI, 0);
+          ctx.fill();
+          // Ponytail (shows direction)
+          ctx.beginPath();
+          ctx.moveTo(dir * (headRadius + 2), -torsoHeight / 2 - headRadius);
+          ctx.lineTo(dir * (headRadius + 12), -torsoHeight / 2 - headRadius + 10);
+          ctx.lineTo(dir * (headRadius + 12), -torsoHeight / 2 + 5);
+          ctx.lineTo(dir * (headRadius + 2), -torsoHeight / 2 + 5);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+
+      // Face
+      ctx.fillStyle = '#333';
+      const eyeY = -torsoHeight / 2 - headRadius - 2;
+      
+      if (dir === 0) {
+        // Front view
+        ctx.beginPath();
+        ctx.arc(-3, eyeY, 2, 0, Math.PI * 2);
+        ctx.arc(3, eyeY, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(0, eyeY + 3, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(0, eyeY + 5, 5, 0, Math.PI);
+        ctx.stroke();
+      } else {
+        // Profile view
+        const eyeOffset = dir * 5;
+        ctx.beginPath();
+        ctx.arc(eyeOffset - 3, eyeY, 2, 0, Math.PI * 2);
+        ctx.arc(eyeOffset + 3, eyeY, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(eyeOffset + dir * 2, eyeY + 2);
+        ctx.lineTo(eyeOffset + dir * 6, eyeY + 4);
+        ctx.lineTo(eyeOffset + dir * 2, eyeY + 6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(eyeOffset, eyeY + 4, 4, 0, Math.PI);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    function drawArrow(startX, startY, length, color, label, direction) {
+      // direction: 1 = right, -1 = left
+      if (Math.abs(length) < 2) return;
+      
+      const dir = direction || (length >= 0 ? 1 : -1);
+      const absLength = Math.abs(length);
+      const endX = startX + dir * absLength;
+      const y = startY;
+      
+      ctx.save();
+      
+      // Arrow line
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(startX, y);
+      ctx.lineTo(endX, y);
+      ctx.stroke();
+      
+      // Arrow head
+      const headSize = 12;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(endX, y);
+      ctx.lineTo(endX - dir * headSize, y - headSize / 2);
+      ctx.lineTo(endX - dir * headSize, y + headSize / 2);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Label
+      ctx.fillStyle = color;
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = dir > 0 ? 'left' : 'right';
+      ctx.fillText(label, startX + dir * 8, y - 10);
+      
+      ctx.restore();
+    }
+
+function drawArrows(x, y, v, a, velColor, accelColor, direction) {
+      // direction: -1 = above (boy), +1 = below (girl)
+      const velLen = clamp(Math.abs(v) * VEL_ARROW_SCALE, 0, MAX_ARROW_LENGTH);
+      const accelLen = clamp(Math.abs(a) * ACCEL_ARROW_SCALE, 0, MAX_ARROW_LENGTH);
+      const velDir = v > 0 ? 1 : (v < 0 ? -1 : 0);
+      const accelDir = a > 0 ? 1 : (a < 0 ? -1 : 0);
+      
+      const velOffset = 50 * direction;
+      const accelOffset = 80 * direction;
+      
+      if (velDir !== 0) drawArrow(x, y + velOffset, velLen, velColor, `v: ${v.toFixed(1)} m/s`, velDir);
+      if (accelDir !== 0) drawArrow(x, y + accelOffset, accelLen, accelColor, `a: ${a.toFixed(1)} m/s²`, accelDir);
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      
+      // Draw track
+      drawTrack();
+      
+      // Boy
+      const boyX = ORIGIN_X + pos * SCALE;
+      drawCharacter(boyX, LANE_Y_BOY, true, facing);
+      drawArrows(boyX, LANE_Y_BOY, vel, accel, '#4a90d9', '#dc3545', -1);
+      
+      // Girl
+      const girlX = ORIGIN_X + girlPos * SCALE;
+      drawCharacter(girlX, LANE_Y_GIRL, false, girlFacing);
+      drawArrows(girlX, LANE_Y_GIRL, girlVel, girlAccel, GIRL_VEL_COLOR, GIRL_ACCEL_COLOR, +1);
+    }
+
+    // ============ SIMULATION LOGIC ============
+    function clamp(val, min, max) {
+      return Math.max(min, Math.min(max, val));
+    }
+
+    function initVelocityTable() {
+      velocityTable = { boy: {}, girl: {} };
+      lastRecordedTime = -1;
+      for (let t = 0; t <= 10; t++) {
+        document.getElementById(`boy-v-${t}`).textContent = '—';
+        document.getElementById(`girl-v-${t}`).textContent = '—';
+      }
+    }
+
+    function recordVelocityAtTime(time) {
+      const intTime = Math.round(time);
+      if (intTime < 0 || intTime > 10 || intTime === lastRecordedTime) return;
+      
+      velocityTable.boy[intTime] = vel;
+      velocityTable.girl[intTime] = girlVel;
+      lastRecordedTime = intTime;
+      
+      document.getElementById(`boy-v-${intTime}`).textContent = vel.toFixed(1);
+      document.getElementById(`girl-v-${intTime}`).textContent = girlVel.toFixed(1);
+    }
+
+    function recordInitialVelocities() {
+      velocityTable = { boy: {0: vel}, girl: {0: girlVel} };
+      document.getElementById('boy-v-0').textContent = vel.toFixed(1);
+      document.getElementById('girl-v-0').textContent = girlVel.toFixed(1);
+      lastRecordedTime = 0;
+    }
+
+    function stepSimulation(dt) {
+      // Boy physics
+      vel += accel * dt;
+      vel = clamp(vel, -MAX_VEL, MAX_VEL);
+      pos += vel * dt;
+      pos = clamp(pos, -HALF_TRACK, HALF_TRACK);
+      if (vel > 0.1) facing = 'right';
+      else if (vel < -0.1) facing = 'left';
+      else facing = 'front';
+      
+      // Girl physics
+      girlVel += girlAccel * dt;
+      girlVel = clamp(girlVel, -MAX_VEL, MAX_VEL);
+      girlPos += girlVel * dt;
+      girlPos = clamp(girlPos, -HALF_TRACK, HALF_TRACK);
+      if (girlVel > 0.1) girlFacing = 'right';
+      else if (girlVel < -0.1) girlFacing = 'left';
+      else girlFacing = 'front';
+      
+      simTime += dt;
+      render();
+    }
+
+    function animationLoop(timestamp) {
+      if (!isPlaying) return;
+      
+      if (lastFrameTime === 0) {
+        lastFrameTime = timestamp;
+      }
+      
+      const dt = (timestamp - lastFrameTime) / 1000;
+      lastFrameTime = timestamp;
+      
+      const cappedDt = Math.min(dt, 0.1);
+      stepSimulation(cappedDt);
+      
+      // Record velocity at integer second boundaries during play
+      if (Math.floor(simTime) !== lastRecordedTime) {
+        recordVelocityAtTime(simTime);
+      }
+      
+      animationId = requestAnimationFrame(animationLoop);
+    }
+
+    function startSimulation() {
+      if (isPlaying) return;
+      
+      // Check if both characters are stuck at edges
+      const boyAtEdge = (vel > 0 && pos >= HALF_TRACK) || (vel < 0 && pos <= -HALF_TRACK);
+      const girlAtEdge = (girlVel > 0 && girlPos >= HALF_TRACK) || (girlVel < 0 && girlPos <= -HALF_TRACK);
+      const boyStuck = vel === 0 && accel === 0;
+      const girlStuck = girlVel === 0 && girlAccel === 0;
+      
+      if (boyStuck && girlStuck) return;
+      if (boyAtEdge && girlAtEdge && boyStuck && girlStuck) return;
+      
+      // Set facing from current velocity
+      if (vel > 0) facing = 'right';
+      else if (vel < 0) facing = 'left';
+      else facing = 'front';
+      
+      if (girlVel > 0) girlFacing = 'right';
+      else if (girlVel < 0) girlFacing = 'left';
+      else girlFacing = 'front';
+      
+      // Disable velocity inputs during play
+      velInput.disabled = true;
+      girlVelInput.disabled = true;
+      
+      isPlaying = true;
+      lastFrameTime = 0;
+      btnPlay.style.display = 'none';
+      btnPause.style.display = 'inline-block';
+      animationId = requestAnimationFrame(animationLoop);
+    }
+
+    function pauseSimulation() {
+      isPlaying = false;
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+      // Enable velocity inputs when paused
+      velInput.disabled = false;
+      girlVelInput.disabled = false;
+      btnPlay.style.display = 'inline-block';
+      btnPause.style.display = 'none';
+    }
+
+    function resetSimulation() {
+      pauseSimulation();
+      simTime = 0;
+      // Boy
+      pos = 0;
+      vel = 0;
+      accel = 0;
+      facing = 'front';
+      // Girl
+      girlPos = 0;
+      girlVel = 0;
+      girlAccel = 0;
+      girlFacing = 'front';
+      // Inputs
+      velInput.value = '0.0';
+      accelInput.value = '0.0';
+      girlVelInput.value = '0.0';
+      girlAccelInput.value = '0.0';
+      velInput.disabled = false;
+      girlVelInput.disabled = false;
+      initVelocityTable();
+      render();
+    }
+
+    function restartSimulation() {
+      pauseSimulation();
+      simTime = 0;
+      
+      // Read ALL values fresh from input boxes (user's intended values)
+      vel = clamp(parseFloat(velInput.value) || 0, -MAX_VEL, MAX_VEL);
+      accel = clamp(parseFloat(accelInput.value) || 0, -MAX_ACCEL, MAX_ACCEL);
+      girlVel = clamp(parseFloat(girlVelInput.value) || 0, -MAX_VEL, MAX_VEL);
+      girlAccel = clamp(parseFloat(girlAccelInput.value) || 0, -MAX_ACCEL, MAX_ACCEL);
+      
+      // Sync input boxes to clamped values
+      velInput.value = vel.toFixed(1);
+      accelInput.value = accel.toFixed(1);
+      girlVelInput.value = girlVel.toFixed(1);
+      girlAccelInput.value = girlAccel.toFixed(1);
+      
+      // Reset positions only
+      pos = 0;
+      girlPos = 0;
+      
+      // Update facing based on current velocities
+      if (vel > 0) facing = 'right';
+      else if (vel < 0) facing = 'left';
+      else facing = 'front';
+      
+      if (girlVel > 0) girlFacing = 'right';
+      else if (girlVel < 0) girlFacing = 'left';
+      else girlFacing = 'front';
+      
+      // Clear table and record initial velocities at t=0
+      initVelocityTable();
+      velocityTable.boy[0] = vel;
+      velocityTable.girl[0] = girlVel;
+      document.getElementById('boy-v-0').textContent = vel.toFixed(1);
+      document.getElementById('girl-v-0').textContent = girlVel.toFixed(1);
+      lastRecordedTime = 0;
+      
+      render();
+    }
+
+    function stepOnce() {
+      const boyAtEdge = (vel > 0 && pos >= HALF_TRACK) || (vel < 0 && pos <= -HALF_TRACK);
+      const girlAtEdge = (girlVel > 0 && girlPos >= HALF_TRACK) || (girlVel < 0 && girlPos <= -HALF_TRACK);
+      const boyStuck = vel === 0 && accel === 0;
+      const girlStuck = girlVel === 0 && girlAccel === 0;
+      
+      if (boyStuck && girlStuck) return;
+      if (boyAtEdge && boyStuck && girlAtEdge && girlStuck) return;
+      
+      // Set facing from current velocity
+      if (vel > 0) facing = 'right';
+      else if (vel < 0) facing = 'left';
+      else facing = 'front';
+      
+      if (girlVel > 0) girlFacing = 'right';
+      else if (girlVel < 0) girlFacing = 'left';
+      else girlFacing = 'front';
+      
+      pauseSimulation();
+      stepSimulation(1.0);
+      recordVelocityAtTime(simTime);
+    }
+
+    // ============ EVENT HANDLERS ============
+    velInput.addEventListener('change', () => {
+      if (isPlaying) return; // Ignore during play
+      restartSimulation();
+    });
+
+    accelInput.addEventListener('change', () => {
+      restartSimulation();
+    });
+
+    girlVelInput.addEventListener('change', () => {
+      if (isPlaying) return; // Ignore during play
+      restartSimulation();
+    });
+
+    girlAccelInput.addEventListener('change', () => {
+      restartSimulation();
+    });
+
+    btnStep.addEventListener('click', stepOnce);
+    btnPlay.addEventListener('click', startSimulation);
+    btnPause.addEventListener('click', pauseSimulation);
+    btnReset.addEventListener('click', resetSimulation);
+
+    // Initial render
+    render();
+    recordInitialVelocities();
+  </script>
+</body>
+</html>

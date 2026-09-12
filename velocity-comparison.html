@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Velocity Comparison</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; min-height: 100vh; padding: 20px; }
+    .container { max-width: 900px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); padding: 24px; }
+    h1 { text-align: center; color: #333; margin-bottom: 20px; font-size: 1.8rem; }
+    .controls { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; justify-content: center; margin-bottom: 20px; padding: 16px; background: #fafafa; border-radius: 8px; }
+    .control-group { display: flex; align-items: center; gap: 8px; }
+    .control-group label { font-weight: 600; color: #555; min-width: 60px; }
+    .control-group input[type="number"] { width: 80px; padding: 8px 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 1rem; text-align: center; }
+    .control-group input[type="number"]:focus { outline: none; border-color: #4a90d9; }
+    .time-display { font-size: 1.2rem; font-weight: 700; color: #333; background: #e8f0fe; padding: 8px 16px; border-radius: 6px; font-variant-numeric: tabular-nums; }
+    .btn { padding: 10px 20px; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-step { background: #4a90d9; color: white; }
+    .btn-step:hover:not(:disabled) { background: #357abd; }
+    .btn-play { background: #28a745; color: white; }
+    .btn-play:hover:not(:disabled) { background: #218838; }
+    .btn-pause { background: #ffc107; color: #333; }
+    .btn-pause:hover:not(:disabled) { background: #e0a800; }
+    .btn-reset { background: #6c757d; color: white; }
+    .btn-reset:hover:not(:disabled) { background: #5a6268; }
+    .nav-bar { display: inline-block; padding: 8px 16px; background: #4a90d9; color: white; border-radius: 6px; text-decoration: none; font-size: 0.9rem; }
+    .nav-bar:hover { background: #357abd; }
+    .canvas-wrapper { position: relative; }
+    canvas { display: block; width: 100%; height: auto; border: 2px solid #eee; border-radius: 8px; background: #fafafa; }
+    .track-labels { display: flex; justify-content: space-between; padding: 8px 4px; font-size: 0.85rem; color: #888; }
+    .legend { display: flex; gap: 24px; justify-content: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid #eee; }
+    .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: #555; }
+    .legend-color { width: 20px; height: 20px; border-radius: 4px; }
+    .origin-label { color: #666; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <nav style="text-align:center; padding:16px 0;">
+    <a href="index.html" class="nav-bar">← Back to Home</a>
+  </nav>
+  <div class="container">
+    <h1>Velocity Comparison</h1>
+    
+    <div class="controls">
+      <div class="control-group">
+        <label for="velBoy">Bob:</label>
+        <input type="number" id="velBoy" min="-20" max="20" step="0.1" value="5">
+        <span>m/s</span>
+      </div>
+      <div class="control-group">
+        <label for="velGirl">Alice:</label>
+        <input type="number" id="velGirl" min="-20" max="20" step="0.1" value="-5">
+        <span>m/s</span>
+      </div>
+      <div class="time-display" id="timeDisplay">Time: 0.0 s</div>
+      <button class="btn btn-step" id="btnStep">Step 1s</button>
+      <button class="btn btn-play" id="btnPlay">Play</button>
+      <button class="btn btn-pause" id="btnPause" style="display:none;">Pause</button>
+      <button class="btn btn-reset" id="btnReset">Reset</button>
+    </div>
+
+    <div class="canvas-wrapper">
+      <canvas id="canvas" width="800" height="400"></canvas>
+    </div>
+    
+    <div class="track-labels">
+      <span>-50 m</span>
+      <span class="origin-label">0 m</span>
+      <span>+50 m</span>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-color" style="background: #4a90d9;"></div>
+        <span>Bob (top lane)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background: #e91e63;"></div>
+        <span>Alice (bottom lane)</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============ CONFIGURATION ============
+    const CANVAS_WIDTH = 800;
+    const CANVAS_HEIGHT = 400;
+    const LANE_Y = [100, 300]; // y positions for boy (top) and girl (bottom)
+    const SCALE = 8; // pixels per meter (800px / 100m = 8)
+    const HALF_TRACK = 50; // meters from origin to each edge
+    const ORIGIN_X = CANVAS_WIDTH / 2; // 400px = 0m position
+    const CHARACTER_WIDTH = 40;
+    const CHARACTER_HEIGHT = 60;
+
+    // ============ STATE ============
+    let simTime = 0;
+    let boyPos = 0; // meters
+    let girlPos = 0; // meters
+    let boyVel = 5; // m/s
+    let girlVel = -5; // m/s
+    let boyFacing = 'front'; // 'left' | 'right' | 'front'
+    let girlFacing = 'front';
+    let isPlaying = false;
+    let lastFrameTime = 0;
+    let animationId = null;
+
+    // ============ DOM ELEMENTS ============
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const velBoyInput = document.getElementById('velBoy');
+    const velGirlInput = document.getElementById('velGirl');
+    const timeDisplay = document.getElementById('timeDisplay');
+    const btnStep = document.getElementById('btnStep');
+    const btnPlay = document.getElementById('btnPlay');
+    const btnPause = document.getElementById('btnPause');
+    const btnReset = document.getElementById('btnReset');
+
+    // ============ DRAWING FUNCTIONS ============
+    function drawTrack(laneIndex) {
+      const y = LANE_Y[laneIndex];
+      
+      // Track background - split left/right of origin
+      // Left side (negative): light blue
+      ctx.fillStyle = '#e8f0fe';
+      ctx.fillRect(0, y - 30, ORIGIN_X, 60);
+      // Right side (positive): light orange
+      ctx.fillStyle = '#fff3e0';
+      ctx.fillRect(ORIGIN_X, y - 30, ORIGIN_X, 60);
+      
+      // Track center line
+      ctx.strokeStyle = '#ccc';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([10, 10]);
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(CANVAS_WIDTH, y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      // Origin line (thicker, distinct)
+      ctx.strokeStyle = '#666';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(ORIGIN_X, y - 35);
+      ctx.lineTo(ORIGIN_X, y + 35);
+      ctx.stroke();
+      ctx.lineWidth = 1;
+      
+      // Distance markers every 10m from -50 to +50
+      ctx.fillStyle = '#999';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'center';
+      for (let m = -HALF_TRACK; m <= HALF_TRACK; m += 10) {
+        const x = ORIGIN_X + m * SCALE;
+        ctx.beginPath();
+        ctx.moveTo(x, y - 35);
+        ctx.lineTo(x, y + 35);
+        ctx.strokeStyle = '#ddd';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        // Label above track
+        const label = m === 0 ? '0' : (m > 0 ? `+${m}` : `${m}`);
+        ctx.fillText(`${label}m`, x, y + 50);
+      }
+      ctx.textAlign = 'start';
+    }
+
+    function drawCharacter(x, y, isBoy, facing) {
+      // facing: 'left' | 'right' | 'front'
+      const dir = facing === 'right' ? 1 : (facing === 'left' ? -1 : 0);
+      const centerX = x;
+      const centerY = y;
+      
+      // Colors
+      const skinColor = '#FFDBAC';
+      const hairColor = isBoy ? '#8B4513' : '#5D3A1A';
+      const shirtColor = isBoy ? '#4a90d9' : '#e91e63';
+      const pantsColor = isBoy ? '#3D3D3D' : '#e91e63';
+      const shoeColor = '#222';
+
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      
+      // Body proportions
+      const headRadius = 14;
+      const torsoWidth = 24;
+      const torsoHeight = 28;
+      const legLength = 22;
+      const armLength = 20;
+
+      // Legs (drawn first so body covers top)
+      ctx.fillStyle = pantsColor;
+      if (dir === 0) {
+        // Front view - both legs side by side
+        // Left leg
+        ctx.fillRect(-10, torsoHeight / 2, 10, legLength);
+        // Right leg
+        ctx.fillRect(0, torsoHeight / 2, 10, legLength);
+        // Shoes
+        ctx.fillStyle = shoeColor;
+        ctx.fillRect(-12, torsoHeight / 2 + legLength - 4, 14, 6);
+        ctx.fillRect(-2, torsoHeight / 2 + legLength - 4, 14, 6);
+      } else {
+        // Profile view - legs staggered
+        // Left leg
+        ctx.beginPath();
+        ctx.moveTo(-dir * 6, torsoHeight / 2);
+        ctx.lineTo(-dir * 6, torsoHeight / 2 + legLength);
+        ctx.lineTo(-dir * 14, torsoHeight / 2 + legLength);
+        ctx.lineTo(-dir * 14, torsoHeight / 2);
+        ctx.closePath();
+        ctx.fill();
+        // Right leg
+        ctx.beginPath();
+        ctx.moveTo(dir * 6, torsoHeight / 2);
+        ctx.lineTo(dir * 6, torsoHeight / 2 + legLength);
+        ctx.lineTo(dir * 14, torsoHeight / 2 + legLength);
+        ctx.lineTo(dir * 14, torsoHeight / 2);
+        ctx.closePath();
+        ctx.fill();
+        // Shoes
+        ctx.fillStyle = shoeColor;
+        ctx.fillRect(-dir * 14, torsoHeight / 2 + legLength - 4, dir * 8, 6);
+        ctx.fillRect(dir * 6, torsoHeight / 2 + legLength - 4, dir * 8, 6);
+      }
+
+      // Torso
+      ctx.fillStyle = shirtColor;
+      if (dir === 0) {
+        // Front view - wider torso
+        ctx.fillRect(-torsoWidth / 2, -torsoHeight / 2, torsoWidth, torsoHeight);
+      } else {
+        // Profile view
+        ctx.beginPath();
+        ctx.moveTo(-dir * torsoWidth / 2, -torsoHeight / 2);
+        ctx.lineTo(dir * torsoWidth / 2, -torsoHeight / 2);
+        ctx.lineTo(dir * torsoWidth / 2, torsoHeight / 2);
+        ctx.lineTo(-dir * torsoWidth / 2, torsoHeight / 2);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // Arms
+      ctx.fillStyle = skinColor;
+      ctx.strokeStyle = skinColor;
+      ctx.lineWidth = 6;
+      if (dir === 0) {
+        // Front view - both arms out slightly
+        ctx.beginPath();
+        ctx.moveTo(-torsoWidth / 2, -torsoHeight / 2 + 8);
+        ctx.lineTo(-torsoWidth / 2 - armLength, -torsoHeight / 2 + 8);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(torsoWidth / 2, -torsoHeight / 2 + 8);
+        ctx.lineTo(torsoWidth / 2 + armLength, -torsoHeight / 2 + 8);
+        ctx.stroke();
+      } else {
+        // Profile view - one arm visible
+        // Left arm
+        ctx.beginPath();
+        ctx.moveTo(-dir * torsoWidth / 2, -torsoHeight / 2 + 6);
+        ctx.lineTo(-dir * (torsoWidth / 2 + armLength), -torsoHeight / 2 + 6);
+        ctx.stroke();
+        // Right arm
+        ctx.beginPath();
+        ctx.moveTo(dir * torsoWidth / 2, -torsoHeight / 2 + 6);
+        ctx.lineTo(dir * (torsoWidth / 2 + armLength), -torsoHeight / 2 + 6);
+        ctx.stroke();
+      }
+
+      // Neck
+      ctx.fillStyle = skinColor;
+      if (dir === 0) {
+        ctx.fillRect(-6, -torsoHeight / 2 - 6, 12, 6);
+      } else {
+        ctx.fillRect(-dir * 8, -torsoHeight / 2 - 6, 16, 6);
+      }
+
+      // Head
+      ctx.fillStyle = skinColor;
+      ctx.beginPath();
+      ctx.arc(0, -torsoHeight / 2 - headRadius - 2, headRadius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Hair
+      ctx.fillStyle = hairColor;
+      if (dir === 0) {
+        // Front view - symmetrical hair
+        if (isBoy) {
+          // Short hair - fringe across forehead
+          ctx.beginPath();
+          ctx.arc(0, -torsoHeight / 2 - headRadius - 2, headRadius + 2, Math.PI, 0);
+          ctx.fill();
+          // Sides
+          ctx.beginPath();
+          ctx.arc(0, -torsoHeight / 2 - headRadius - 2, headRadius + 1, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          // Girl - long hair both sides
+          ctx.beginPath();
+          ctx.arc(0, -torsoHeight / 2 - headRadius - 2, headRadius + 3, Math.PI, 0);
+          ctx.fill();
+          // Hair falling on both sides
+          ctx.beginPath();
+          ctx.ellipse(-headRadius - 2, -torsoHeight / 2 - headRadius + 5, 6, 15, 0, 0, Math.PI * 2);
+          ctx.ellipse(headRadius + 2, -torsoHeight / 2 - headRadius + 5, 6, 15, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else {
+        // Profile view
+        if (isBoy) {
+          // Short hair - front fringe
+          ctx.beginPath();
+          ctx.arc(0, -torsoHeight / 2 - headRadius - 2, headRadius + 2, Math.PI, 0);
+          ctx.fill();
+          // Back hair
+          ctx.beginPath();
+          ctx.arc(0, -torsoHeight / 2 - headRadius - 2, headRadius + 1, 0, Math.PI);
+          ctx.fill();
+        } else {
+          // Long hair with ponytail
+          ctx.beginPath();
+          ctx.arc(0, -torsoHeight / 2 - headRadius - 2, headRadius + 3, Math.PI, 0);
+          ctx.fill();
+          // Ponytail (shows direction)
+          ctx.beginPath();
+          ctx.moveTo(dir * (headRadius + 2), -torsoHeight / 2 - headRadius);
+          ctx.lineTo(dir * (headRadius + 12), -torsoHeight / 2 - headRadius + 10);
+          ctx.lineTo(dir * (headRadius + 12), -torsoHeight / 2 + 5);
+          ctx.lineTo(dir * (headRadius + 2), -torsoHeight / 2 + 5);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+
+      // Face - eyes and nose to show direction
+      ctx.fillStyle = '#333';
+      const eyeY = -torsoHeight / 2 - headRadius - 2;
+      
+      if (dir === 0) {
+        // Front view - both eyes centered
+        // Eyes
+        ctx.beginPath();
+        ctx.arc(-3, eyeY, 2, 0, Math.PI * 2);
+        ctx.arc(3, eyeY, 2, 0, Math.PI * 2);
+        ctx.fill();
+        // Nose - small dot
+        ctx.beginPath();
+        ctx.arc(0, eyeY + 3, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        // Smile
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(0, eyeY + 5, 5, 0, Math.PI);
+        ctx.stroke();
+      } else {
+        // Profile view
+        const eyeOffset = dir * 5;
+        // Eyes
+        ctx.beginPath();
+        ctx.arc(eyeOffset - 3, eyeY, 2, 0, Math.PI * 2);
+        ctx.arc(eyeOffset + 3, eyeY, 2, 0, Math.PI * 2);
+        ctx.fill();
+        // Nose (triangle pointing forward)
+        ctx.beginPath();
+        ctx.moveTo(eyeOffset + dir * 2, eyeY + 2);
+        ctx.lineTo(eyeOffset + dir * 6, eyeY + 4);
+        ctx.lineTo(eyeOffset + dir * 2, eyeY + 6);
+        ctx.closePath();
+        ctx.fill();
+        // Smile
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(eyeOffset, eyeY + 4, 4, 0, Math.PI);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      
+      // Draw tracks
+      drawTrack(0); // Boy lane
+      drawTrack(1); // Girl lane
+      
+      // Convert positions to pixels
+      const boyX = ORIGIN_X + boyPos * SCALE;
+      const girlX = ORIGIN_X + girlPos * SCALE;
+      
+      // Draw characters using current facing state
+      drawCharacter(boyX, LANE_Y[0], true, boyFacing);
+      drawCharacter(girlX, LANE_Y[1], false, girlFacing);
+      
+      // Draw velocity labels above characters
+      ctx.fillStyle = '#333';
+      ctx.font = 'bold 13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${boyVel.toFixed(1)} m/s`, boyX, LANE_Y[0] - 55);
+      ctx.fillText(`${girlVel.toFixed(1)} m/s`, girlX, LANE_Y[1] - 55);
+      ctx.textAlign = 'start';
+    }
+
+    // ============ SIMULATION LOGIC ============
+    function stepSimulation(dt) {
+      // Update positions with clamping at both edges
+      boyPos = Math.max(-HALF_TRACK, Math.min(HALF_TRACK, boyPos + boyVel * dt));
+      girlPos = Math.max(-HALF_TRACK, Math.min(HALF_TRACK, girlPos + girlVel * dt));
+      
+      simTime += dt;
+      updateTimeDisplay();
+      checkStopConditions();
+    }
+
+    function updateTimeDisplay() {
+      timeDisplay.textContent = `Time: ${simTime.toFixed(1)} s`;
+    }
+
+    function checkStopConditions() {
+      // Check if each character is at the edge in their velocity direction
+      const boyAtEdge = (boyVel > 0 && boyPos >= HALF_TRACK) || (boyVel < 0 && boyPos <= -HALF_TRACK);
+      const girlAtEdge = (girlVel > 0 && girlPos >= HALF_TRACK) || (girlVel < 0 && girlPos <= -HALF_TRACK);
+      
+      // Both stopped: either at edge in velocity direction, or velocity is zero
+      const boyStopped = boyVel === 0 || boyAtEdge;
+      const girlStopped = girlVel === 0 || girlAtEdge;
+      
+      if (boyStopped && girlStopped) {
+        pauseSimulation();
+      }
+    }
+
+    function animationLoop(timestamp) {
+      if (!isPlaying) return;
+      
+      if (lastFrameTime === 0) {
+        lastFrameTime = timestamp;
+      }
+      
+      const dt = (timestamp - lastFrameTime) / 1000; // seconds
+      lastFrameTime = timestamp;
+      
+      // Cap dt to prevent large jumps
+      const cappedDt = Math.min(dt, 0.1);
+      stepSimulation(cappedDt);
+      render();
+      
+      animationId = requestAnimationFrame(animationLoop);
+    }
+
+    function startSimulation() {
+      if (isPlaying) return;
+      
+      // Check if each character is at the edge in their velocity direction
+      const boyAtEdge = (boyVel > 0 && boyPos >= HALF_TRACK) || (boyVel < 0 && boyPos <= -HALF_TRACK);
+      const girlAtEdge = (girlVel > 0 && girlPos >= HALF_TRACK) || (girlVel < 0 && girlPos <= -HALF_TRACK);
+      
+      // Don't start if both have zero velocity or both are stuck at edges
+      if (boyVel === 0 && girlVel === 0) return;
+      if (boyAtEdge && girlAtEdge) return;
+      
+      // Set facing based on velocity when starting
+      if (boyVel > 0) boyFacing = 'right';
+      else if (boyVel < 0) boyFacing = 'left';
+      
+      if (girlVel > 0) girlFacing = 'right';
+      else if (girlVel < 0) girlFacing = 'left';
+      
+      isPlaying = true;
+      lastFrameTime = 0;
+      btnPlay.style.display = 'none';
+      btnPause.style.display = 'inline-block';
+      animationId = requestAnimationFrame(animationLoop);
+    }
+
+    function pauseSimulation() {
+      isPlaying = false;
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+      btnPlay.style.display = 'inline-block';
+      btnPause.style.display = 'none';
+    }
+
+    function resetSimulation() {
+      pauseSimulation();
+      simTime = 0;
+      boyPos = 0;
+      girlPos = 0;
+      boyVel = 0;
+      girlVel = 0;
+      boyFacing = 'front';
+      girlFacing = 'front';
+      velBoyInput.value = '0.0';
+      velGirlInput.value = '0.0';
+      updateTimeDisplay();
+      render();
+    }
+
+    function stepOnce() {
+      // Check if each character is at the edge in their velocity direction
+      const boyAtEdge = (boyVel > 0 && boyPos >= HALF_TRACK) || (boyVel < 0 && boyPos <= -HALF_TRACK);
+      const girlAtEdge = (girlVel > 0 && girlPos >= HALF_TRACK) || (girlVel < 0 && girlPos <= -HALF_TRACK);
+      
+      if (boyAtEdge && girlAtEdge) return;
+      if (boyVel === 0 && girlVel === 0) return;
+      
+      // Set facing based on velocity when stepping
+      if (boyVel > 0) boyFacing = 'right';
+      else if (boyVel < 0) boyFacing = 'left';
+      
+      if (girlVel > 0) girlFacing = 'right';
+      else if (girlVel < 0) girlFacing = 'left';
+      
+      pauseSimulation();
+      stepSimulation(1.0);
+      render();
+    }
+
+    // ============ EVENT HANDLERS ============
+    velBoyInput.addEventListener('change', () => {
+      boyVel = Math.max(-20, Math.min(20, parseFloat(velBoyInput.value) || 0));
+      velBoyInput.value = boyVel.toFixed(1);
+      render();
+    });
+
+    velGirlInput.addEventListener('change', () => {
+      girlVel = Math.max(-20, Math.min(20, parseFloat(velGirlInput.value) || 0));
+      velGirlInput.value = girlVel.toFixed(1);
+      render();
+    });
+
+    btnStep.addEventListener('click', stepOnce);
+    btnPlay.addEventListener('click', startSimulation);
+    btnPause.addEventListener('click', pauseSimulation);
+    btnReset.addEventListener('click', resetSimulation);
+
+    // Initial render
+    render();
+  </script>
+</body>
+</html>
