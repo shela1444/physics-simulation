@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Harmonic Motion</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; min-height: 100vh; padding: 20px; }
+    .container { max-width: 900px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); padding: 24px; }
+    h1 { text-align: center; color: #333; margin-bottom: 20px; font-size: 1.8rem; }
+    
+    /* Navigation */
+    .nav-bar { display: inline-block; padding: 8px 16px; background: #4a90d9; color: white; border-radius: 6px; text-decoration: none; font-size: 0.9rem; margin-bottom: 20px; }
+    .nav-bar:hover { background: #357abd; }
+    
+    /* Tabs */
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+    .tab { padding: 10px 24px; border: 2px solid #ddd; background: #fafafa; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+    .tab:hover { background: #f0f0f0; }
+    .tab.active { background: #4a90d9; color: white; border-color: #4a90d9; }
+    
+    /* Parameter Panel */
+    .params-panel { background: #fafafa; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+    .param-group { display: none; }
+    .param-group.active { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+    .param-group h3 { grid-column: 1 / -1; margin-bottom: 12px; color: #333; font-size: 1rem; }
+    .control-group { display: flex; flex-direction: column; gap: 4px; }
+    .control-group label { font-weight: 600; color: #555; font-size: 0.85rem; }
+    .control-group input[type="number"] { padding: 8px 12px; border: 2px solid #ddd; border-radius: 6px; font-size: 1rem; text-align: center; }
+    .control-group input[type="number"]:focus { outline: none; border-color: #4a90d9; }
+    .control-group input[type="number"]:disabled { background: #f5f5f5; color: #999; }
+    
+    /* Animation Canvas */
+    .canvas-wrapper { position: relative; margin-bottom: 20px; }
+    #animCanvas { display: block; width: 100%; max-width: 350px; height: auto; border: 2px solid #eee; border-radius: 8px; background: #fafafa; margin: 0 auto; }
+    
+    /* Graph Controls */
+    .graph-controls { display: flex; gap: 16px; flex-wrap: wrap; padding: 12px 16px; background: #e8f0fe; border-radius: 8px; margin-bottom: 16px; justify-content: center; }
+    .graph-controls label { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; cursor: pointer; font-weight: 500; color: #333; }
+    .graph-controls input[type="checkbox"] { width: 16px; height: 16px; accent-color: #4a90d9; }
+    
+    /* Info Panel */
+    .info-panel { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; padding: 12px 16px; background: #f0f0f0; border-radius: 8px; margin-bottom: 16px; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+    .info-item { font-weight: 600; color: #333; }
+    .info-item span { font-weight: 400; color: #666; margin-left: 6px; }
+    
+    /* Controls */
+    .controls { display: flex; gap: 12px; justify-content: center; margin-bottom: 24px; }
+    .btn { padding: 10px 24px; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-play { background: #28a745; color: white; }
+    .btn-play:hover:not(:disabled) { background: #218838; }
+    .btn-pause { background: #ffc107; color: #333; }
+    .btn-pause:hover:not(:disabled) { background: #e0a800; }
+    .btn-reset { background: #6c757d; color: white; }
+    .btn-reset:hover:not(:disabled) { background: #5a6268; }
+    
+    /* Graphs Container - Vertical Stack Layout */
+    .graphs-container { display: flex; flex-direction: column; gap: 16px; }
+    .graph-wrapper { width: 100%; max-width: 600px; margin: 0 auto; }
+    .graph-wrapper.hidden { display: none; }
+    .graph-canvas { width: 100%; height: 150px; border: 1px solid #eee; border-radius: 8px; background: #fff; display: block; }
+    .graph-label { font-weight: 600; color: #333; margin-bottom: 4px; text-align: center; font-size: 0.85rem; }
+    
+    /* Legend */
+    .legend { display: flex; gap: 24px; justify-content: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid #eee; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: #555; }
+    .legend-color { width: 20px; height: 4px; border-radius: 2px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav style="text-align:center; padding:16px 0;">
+      <a href="index.html" class="nav-bar">← Back to Home</a>
+    </nav>
+    
+    <h1>Simple Harmonic Motion</h1>
+    
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-system="spring">Mass-Spring</button>
+      <button class="tab" data-system="pendulum">Pendulum</button>
+    </div>
+    
+    <!-- Parameters Panel -->
+    <div class="params-panel">
+      <!-- Mass-Spring Parameters -->
+      <div class="param-group active" data-system="spring">
+        <h3>Mass-Spring Parameters</h3>
+        <div class="control-group">
+          <label for="mass">Mass (kg)</label>
+          <input type="number" id="mass" min="0.1" max="10" step="0.1" value="1.0">
+        </div>
+        <div class="control-group">
+          <label for="springK">Spring Constant k (N/m)</label>
+          <input type="number" id="springK" min="0.1" max="100" step="0.1" value="10">
+        </div>
+        <div class="control-group">
+          <label for="amplitude">Amplitude (m)</label>
+          <input type="number" id="amplitude" min="0.01" max="2" step="0.01" value="0.5">
+        </div>
+        <div class="control-group">
+          <label for="phase">Phase (π)</label>
+          <input type="number" id="phase" min="0" max="2" step="any" value="0">
+        </div>
+      </div>
+      
+      <!-- Pendulum Parameters -->
+      <div class="param-group" data-system="pendulum">
+        <h3>Pendulum Parameters</h3>
+        <div class="control-group">
+          <label for="pendulumMass">Mass (kg)</label>
+          <input type="number" id="pendulumMass" min="0.1" max="10" step="0.1" value="1.0">
+        </div>
+        <div class="control-group">
+          <label for="length">Length (m)</label>
+          <input type="number" id="length" min="0.1" max="5" step="0.01" value="1.0">
+        </div>
+        <div class="control-group">
+          <label for="angle">Initial Angle (rad, max 0.5)</label>
+          <input type="number" id="angle" min="0.01" max="0.5" step="0.01" value="0.3">
+        </div>
+        <div class="control-group">
+          <label for="pendulumPhase">Phase (π)</label>
+          <input type="number" id="pendulumPhase" min="0" max="2" step="any" value="0">
+        </div>
+        <div class="control-group">
+          <label for="gravity">Gravity (m/s²)</label>
+          <input type="number" id="gravity" min="1" max="20" step="0.1" value="9.8">
+        </div>
+      </div>
+    </div>
+    
+    <!-- Animation Canvas -->
+    <div class="canvas-wrapper">
+      <canvas id="animCanvas" width="350" height="220"></canvas>
+    </div>
+    
+    <!-- Graph Visibility Controls -->
+    <div class="graph-controls">
+      <label><input type="checkbox" checked data-graph="displacement"> x(t) Displacement</label>
+      <label><input type="checkbox" checked data-graph="velocity"> v(t) Velocity</label>
+      <label><input type="checkbox" checked data-graph="acceleration"> a(t) Acceleration</label>
+      <label><input type="checkbox" checked data-graph="energy"> Energy (KE, PE, E)</label>
+      <label><input type="checkbox" checked data-graph="energyX"> Energy vs x</label>
+    </div>
+    
+    <!-- Info Panel -->
+    <div class="info-panel">
+      <div class="info-item">Time: <span id="timeDisplay">0.00</span> s</div>
+      <div class="info-item">Period: <span id="periodDisplay">2.01</span> s</div>
+      <div class="info-item">ω: <span id="omegaDisplay">3.13</span> rad/s</div>
+      <div class="info-item">E: <span id="energyDisplay">1.25</span> J</div>
+    </div>
+    
+    <!-- Controls -->
+    <div class="controls">
+      <button class="btn btn-play" id="btnPlay">Play</button>
+      <button class="btn btn-pause" id="btnPause" style="display:none;">Pause</button>
+      <button class="btn btn-reset" id="btnReset">Reset</button>
+    </div>
+    
+    <!-- Graphs Container -->
+    <div class="graphs-container" id="graphsContainer">
+      <div class="graph-wrapper" id="graph-displacement">
+        <div class="graph-label">x(t) - Displacement</div>
+        <canvas class="graph-canvas" id="canvas-displacement" width="800" height="150"></canvas>
+      </div>
+      <div class="graph-wrapper" id="graph-velocity">
+        <div class="graph-label">v(t) - Velocity</div>
+        <canvas class="graph-canvas" id="canvas-velocity" width="800" height="150"></canvas>
+      </div>
+      <div class="graph-wrapper" id="graph-acceleration">
+        <div class="graph-label">a(t) - Acceleration</div>
+        <canvas class="graph-canvas" id="canvas-acceleration" width="800" height="150"></canvas>
+      </div>
+      <div class="graph-wrapper energy" id="graph-energy">
+        <div class="graph-label">Energy</div>
+        <canvas class="graph-canvas" id="canvas-energy" width="800" height="150"></canvas>
+      </div>
+      <div class="graph-wrapper energy-x" id="graph-energyX">
+        <div class="graph-label">Energy vs x</div>
+        <canvas class="graph-canvas" id="canvas-energyX" width="800" height="150"></canvas>
+      </div>
+    </div>
+    
+    <!-- Legend -->
+    <div class="legend" id="legendContainer"></div>
+  </div>
+
+  <script>
+    // ============ CONFIGURATION ============
+    const systems = {
+      spring: {
+        id: 'spring',
+        name: 'Mass-Spring',
+        defaults: { mass: 1.0, k: 10, amplitude: 0.5, phase: 0 },
+        limits: { 
+          mass: [0.1, 10, 0.1], 
+          k: [0.1, 100, 0.1], 
+          amplitude: [0.01, 2, 0.01], 
+          phase: [0, 2*Math.PI, 0.01] 
+        },
+        colors: { 
+          displacement: '#4a90d9',
+          velocity: '#28a745',
+          acceleration: '#dc3545',
+          ke: '#28a745',
+          pe: '#ff9800',
+          total: '#dc3545'
+        },
+        paramLabels: {
+          mass: 'Mass (kg)',
+          k: 'Spring k (N/m)',
+          amplitude: 'Amplitude (m)',
+          phase: 'Phase (π)'
+        }
+      },
+      pendulum: {
+        id: 'pendulum',
+        name: 'Pendulum',
+        defaults: { mass: 1.0, length: 1.0, angle: 0.3, phase: 0, g: 9.8 },
+        limits: { 
+          mass: [0.1, 10, 0.1], 
+          length: [0.1, 5, 0.01], 
+          angle: [0.01, 0.5, 0.01],
+          phase: [0, 2*Math.PI, 0.01],
+          g: [1, 20, 0.1] 
+        },
+        colors: { 
+          displacement: '#e91e63',
+          velocity: '#28a745',
+          acceleration: '#dc3545',
+          ke: '#28a745',
+          pe: '#ff9800',
+          total: '#dc3545'
+        },
+        paramLabels: {
+          mass: 'Mass (kg)',
+          length: 'Length (m)',
+          angle: 'Angle (rad)',
+          phase: 'Phase (π)',
+          g: 'Gravity (m/s²)'
+        }
+      }
+    };
+
+    // ============ STATE ============
+    let currentSystem = 'spring';
+    let currentParams = { ...systems.spring.defaults };
+    let simTime = 0;
+    let currentPeriod = 2.01;
+    let isPlaying = false;
+    let lastFrameTime = 0;
+    let animationId = null;
+
+    // Graph visibility
+    const graphVisibility = {
+      displacement: true,
+      velocity: true,
+      acceleration: true,
+      energy: true,
+      energyX: true
+    };
+
+    // Shared padding constants for motion graphs (x, v, a) to ensure alignment
+    const MOTION_GRAPH_PADDING = {
+      top: 30,
+      right: 20,
+      bottom: 50,
+      left: 80
+    };
+
+    // Graph data buffers (circular)
+    const graphData = {
+      time: [],
+      displacement: [],
+      velocity: [],
+      acceleration: [],
+      ke: [],
+      pe: [],
+      totalE: []
+    };
+    const MAX_DATA_POINTS = 3000;
+
+    // ============ DOM ELEMENTS ============
+    const animCanvas = document.getElementById('animCanvas');
+    const animCtx = animCanvas.getContext('2d');
+    const graphsContainer = document.getElementById('graphsContainer');
+    const legendContainer = document.getElementById('legendContainer');
+    const timeDisplay = document.getElementById('timeDisplay');
+    const periodDisplay = document.getElementById('periodDisplay');
+    const omegaDisplay = document.getElementById('omegaDisplay');
+    const energyDisplay = document.getElementById('energyDisplay');
+    const btnPlay = document.getElementById('btnPlay');
+    const btnPause = document.getElementById('btnPause');
+    const btnReset = document.getElementById('btnReset');
+
+    // Parameter inputs
+    const massInput = document.getElementById('mass');
+    const springKInput = document.getElementById('springK');
+    const amplitudeInput = document.getElementById('amplitude');
+    const phaseInput = document.getElementById('phase');
+    const pendulumMassInput = document.getElementById('pendulumMass');
+    const lengthInput = document.getElementById('length');
+    const angleInput = document.getElementById('angle');
+    const pendulumPhaseInput = document.getElementById('pendulumPhase');
+    const gravityInput = document.getElementById('gravity');
+
+    // Graph checkboxes
+    const graphCheckboxes = document.querySelectorAll('.graph-controls input[type="checkbox"]');
+
+    // ============ INITIALIZATION ============
+    function init() {
+      // Initialize graph canvases
+      createGraphCanvases();
+      
+      // Load initial params
+      updateParamsFromInputs();
+      
+      // Initial render
+      resetSimulation();
+      
+      // Event listeners
+      setupEventListeners();
+    }
+
+    function createGraphCanvases() {
+      const graphConfigs = [
+        { id: 'displacement', label: 'x(t) - Displacement', colorKey: 'displacement', yLabel: 'Displacement (m)', type: 'motion' },
+        { id: 'velocity', label: 'v(t) - Velocity', colorKey: 'velocity', yLabel: 'Velocity (m/s)', type: 'motion' },
+        { id: 'acceleration', label: 'a(t) - Acceleration', colorKey: 'acceleration', yLabel: 'Acceleration (m/s²)', type: 'motion' },
+        { id: 'energy', label: 'Energy', colorKey: 'energy', yLabel: 'Energy (J)', type: 'energy', combined: true },
+        { id: 'energyX', label: 'Energy vs x', colorKey: 'energy', yLabel: 'Energy (J)', type: 'energyX', combined: true }
+      ];
+
+      graphConfigs.forEach(config => {
+        const canvas = document.getElementById(`canvas-${config.id}`);
+        if (canvas) {
+          config.canvas = canvas;
+          config.ctx = canvas.getContext('2d');
+        }
+      });
+
+      // Store graph configs globally
+      window.graphConfigs = graphConfigs;
+    }
+
+    function setupEventListeners() {
+      // Tab switching
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          switchSystem(tab.dataset.system);
+        });
+      });
+
+      // Parameter inputs - all trigger restart
+      const allInputs = [
+        massInput, springKInput, amplitudeInput, phaseInput,
+        pendulumMassInput, lengthInput, angleInput, pendulumPhaseInput, gravityInput
+      ];
+      allInputs.forEach(input => {
+        input.addEventListener('change', () => {
+          updateParamsFromInputs();
+          restartSimulation();
+        });
+      });
+
+      // Graph checkboxes
+      graphCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+          graphVisibility[checkbox.dataset.graph] = checkbox.checked;
+          updateGraphVisibility();
+          updateLegend();
+        });
+      });
+
+      // Control buttons
+      btnPlay.addEventListener('click', startSimulation);
+      btnPause.addEventListener('click', pauseSimulation);
+      btnReset.addEventListener('click', resetSimulation);
+    }
+
+    // ============ SYSTEM SWITCHING ============
+    function switchSystem(systemId) {
+      currentSystem = systemId;
+      currentParams = { ...systems[systemId].defaults };
+      
+      // Update tabs
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.system === systemId);
+      });
+
+      // Update parameter groups
+      document.querySelectorAll('.param-group').forEach(group => {
+        group.classList.toggle('active', group.dataset.system === systemId);
+      });
+
+      // Update inputs
+      syncInputsToParams();
+      
+      // Reset simulation
+      resetSimulation();
+    }
+
+    function updateParamsFromInputs() {
+      if (currentSystem === 'spring') {
+        currentParams = {
+          mass: parseFloat(massInput.value) || systems.spring.defaults.mass,
+          k: parseFloat(springKInput.value) || systems.spring.defaults.k,
+          amplitude: parseFloat(amplitudeInput.value) || systems.spring.defaults.amplitude,
+          phase: (parseFloat(phaseInput.value) || 0) * Math.PI
+        };
+      } else {
+        currentParams = {
+          mass: parseFloat(pendulumMassInput.value) || systems.pendulum.defaults.mass,
+          length: parseFloat(lengthInput.value) || systems.pendulum.defaults.length,
+          angle: parseFloat(angleInput.value) || systems.pendulum.defaults.angle,
+          phase: (parseFloat(pendulumPhaseInput.value) || 0) * Math.PI,
+          g: parseFloat(gravityInput.value) || systems.pendulum.defaults.g
+        };
+      }
+    }
+
+    function syncInputsToParams() {
+      const sys = systems[currentSystem];
+      if (currentSystem === 'spring') {
+        massInput.value = currentParams.mass.toFixed(1);
+        springKInput.value = currentParams.k.toFixed(1);
+        amplitudeInput.value = currentParams.amplitude.toFixed(2);
+        phaseInput.value = (currentParams.phase / Math.PI).toFixed(2);
+      } else {
+        pendulumMassInput.value = currentParams.mass.toFixed(1);
+        lengthInput.value = currentParams.length.toFixed(2);
+        angleInput.value = currentParams.angle.toFixed(2);
+        pendulumPhaseInput.value = (currentParams.phase / Math.PI).toFixed(2);
+        gravityInput.value = currentParams.g.toFixed(1);
+      }
+    }
+
+    // ============ PHYSICS COMPUTATION ============
+    function computeSpring(t, params) {
+      const { mass, k, amplitude, phase } = params;
+      const omega = Math.sqrt(k / mass);
+      const x = amplitude * Math.cos(omega * t + phase);
+      const v = -amplitude * omega * Math.sin(omega * t + phase);
+      const a = -amplitude * omega * omega * Math.cos(omega * t + phase);
+      const ke = 0.5 * mass * v * v;
+      const pe = 0.5 * k * x * x;
+      const totalE = 0.5 * k * amplitude * amplitude;
+      return { x, v, a, ke, pe, totalE, omega, period: 2 * Math.PI / omega };
+    }
+
+    function computePendulum(t, params) {
+      const { mass, length, angle, phase, g } = params;
+      const omega = Math.sqrt(g / length);
+      const theta = angle * Math.cos(omega * t + phase);
+      const omegaAng = -angle * omega * Math.sin(omega * t + phase);
+      const x = length * Math.sin(theta);  // exact horizontal displacement
+      const v = length * omegaAng;
+      const a = -g * Math.sin(theta);      // exact tangential acceleration
+      const ke = 0.5 * mass * v * v;
+      const pe = mass * g * length * (1 - Math.cos(theta));
+      const totalE = mass * g * length * (1 - Math.cos(angle));
+      return { x, v, a, ke, pe, totalE, omega, period: 2 * Math.PI / omega };
+    }
+
+    function computePhysics(t) {
+      if (currentSystem === 'spring') {
+        return computeSpring(t, currentParams);
+      } else {
+        return computePendulum(t, currentParams);
+      }
+    }
+
+    // ============ GRAPH DATA MANAGEMENT ============
+    function addDataPoint(t, data) {
+      graphData.time.push(t);
+      graphData.displacement.push(data.x);
+      graphData.velocity.push(data.v);
+      graphData.acceleration.push(data.a);
+      graphData.ke.push(data.ke);
+      graphData.pe.push(data.pe);
+      graphData.totalE.push(data.totalE);
+
+      // Keep only last 3 periods worth of data
+      const maxTime = t - 3 * currentPeriod;
+      while (graphData.time.length > 0 && graphData.time[0] < maxTime) {
+        graphData.time.shift();
+        graphData.displacement.shift();
+        graphData.velocity.shift();
+        graphData.acceleration.shift();
+        graphData.ke.shift();
+        graphData.pe.shift();
+        graphData.totalE.shift();
+      }
+    }
+
+    function clearGraphData() {
+      graphData.time = [];
+      graphData.displacement = [];
+      graphData.velocity = [];
+      graphData.acceleration = [];
+      graphData.ke = [];
+      graphData.pe = [];
+      graphData.totalE = [];
+    }
+
+    // ============ GRAPH RENDERING ============
+    function renderGraph(config, timeWindow) {
+      const ctx = config.ctx;
+      const canvas = config.canvas;
+      const width = canvas.width;
+      const height = canvas.height;
+      
+      // Use shared padding for motion graphs to ensure alignment
+      const isMotion = config.type === 'motion';
+      const padding = isMotion ? MOTION_GRAPH_PADDING : { top: 30, right: 20, bottom: 40, left: 60 };
+      const plotWidth = width - padding.left - padding.right;
+      const plotHeight = height - padding.top - padding.bottom;
+
+      ctx.clearRect(0, 0, width, height);
+
+      // Get data for this graph
+      let yData;
+      switch (config.id) {
+        case 'displacement': yData = graphData.displacement; break;
+        case 'velocity': yData = graphData.velocity; break;
+        case 'acceleration': yData = graphData.acceleration; break;
+        case 'ke': yData = graphData.ke; break;
+        case 'pe': yData = graphData.pe; break;
+        case 'totalE': yData = graphData.totalE; break;
+        default: return;
+      }
+
+      if (yData.length < 2) return;
+
+      const color = systems[currentSystem].colors[config.colorKey];
+      const times = graphData.time;
+
+      // Find data range for time window
+      const maxTime = simTime;
+      const minTime = Math.max(0, maxTime - timeWindow);
+      
+      // Find indices for visible range
+      let startIdx = 0;
+      while (startIdx < times.length && times[startIdx] < minTime) startIdx++;
+      
+      const visibleTimes = times.slice(startIdx);
+      const visibleY = yData.slice(startIdx);
+      
+      if (visibleTimes.length < 2) return;
+
+      // Y-axis scaling
+      const yMin = Math.min(...visibleY);
+      const yMax = Math.max(...visibleY);
+      const yRange = yMax - yMin || 1;
+      const yPadding = yRange * 0.1;
+      const scaleY = plotHeight / (yRange + 2 * yPadding);
+      const yZero = padding.top + plotHeight - (-yMin + yPadding) * scaleY;
+
+      // Time axis scaling
+      const scaleX = plotWidth / timeWindow;
+
+      // Draw grid
+      ctx.strokeStyle = '#eee';
+      ctx.lineWidth = 1;
+      
+      // Vertical grid lines (every period/4)
+      const gridTimeStep = currentPeriod / 4;
+      for (let t = Math.ceil(minTime / gridTimeStep) * gridTimeStep; t <= maxTime; t += gridTimeStep) {
+        const x = padding.left + (t - minTime) * scaleX;
+        ctx.beginPath();
+        ctx.moveTo(x, padding.top);
+        ctx.lineTo(x, height - padding.bottom);
+        ctx.stroke();
+      }
+      
+      // Horizontal grid lines (5 lines)
+      for (let i = 0; i <= 5; i++) {
+        const y = padding.top + (plotHeight / 5) * i;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(width - padding.right, y);
+        ctx.stroke();
+      }
+
+      // Draw axes
+      ctx.strokeStyle = '#999';
+      ctx.lineWidth = 1.5;
+      // Y axis
+      ctx.beginPath();
+      ctx.moveTo(padding.left, padding.top);
+      ctx.lineTo(padding.left, height - padding.bottom);
+      ctx.stroke();
+      // X axis (at y=0 if in range, else at bottom)
+      const xAxisY = (yZero >= padding.top && yZero <= height - padding.bottom) ? yZero : height - padding.bottom;
+      ctx.beginPath();
+      ctx.moveTo(padding.left, xAxisY);
+      ctx.lineTo(width - padding.right, xAxisY);
+      ctx.stroke();
+
+      // Y-axis labels
+      ctx.fillStyle = '#666';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      for (let i = 0; i <= 5; i++) {
+        const val = yMax + yPadding - (yRange + 2 * yPadding) * (i / 5);
+        const y = padding.top + (plotHeight / 5) * i;
+        ctx.fillText(val.toFixed(2), padding.left - 8, y);
+      }
+
+      // X-axis labels - fractions of period
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      for (let t = Math.ceil(minTime / gridTimeStep) * gridTimeStep; t <= maxTime; t += gridTimeStep) {
+        const x = padding.left + (t - minTime) * scaleX;
+        const fraction = t / currentPeriod;
+        let label;
+        if (fraction === 0) {
+          label = '0';
+        } else if (Number.isInteger(fraction)) {
+          label = fraction === 1 ? 'T' : fraction + 'T';
+        } else if (Math.abs(fraction * 2 - Math.round(fraction * 2)) < 0.001) {
+          label = fraction.toFixed(1) + 'T';
+        } else if (Math.abs(fraction * 4 - Math.round(fraction * 4)) < 0.001) {
+          label = fraction.toFixed(2).replace('0.', '.') + 'T';
+        } else {
+          label = fraction.toFixed(2) + 'T';
+        }
+        ctx.fillText(label, x, height - padding.bottom + 4);
+      }
+
+      // Draw data line
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      
+      for (let i = 0; i < visibleTimes.length; i++) {
+        const x = padding.left + (visibleTimes[i] - minTime) * scaleX;
+        const y = padding.top + plotHeight - (visibleY[i] - yMin + yPadding) * scaleY;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // Draw current position marker
+      const latestTime = times[times.length - 1];
+      const latestY = yData[yData.length - 1];
+      if (latestTime >= minTime) {
+        const x = padding.left + (latestTime - minTime) * scaleX;
+        const y = padding.top + plotHeight - (latestY - yMin + yPadding) * scaleY;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    }
+
+    // ============ ENERGY GRAPH RENDERING (COMBINED) ============
+    function renderEnergyGraph(config, timeWindow) {
+      const ctx = config.ctx;
+      const canvas = config.canvas;
+      const width = canvas.width;
+      const height = canvas.height;
+      
+      // Use motion graph padding for left/right alignment, but extend right for legend
+      const padding = { ...MOTION_GRAPH_PADDING };
+      padding.right = 100;  // Extend right for legend
+      // Use motion graph's plot width for time axis alignment
+      const motionPlotWidth = width - MOTION_GRAPH_PADDING.left - MOTION_GRAPH_PADDING.right;
+      const plotWidth = width - padding.left - padding.right;
+      const plotHeight = height - padding.top - padding.bottom;
+
+      ctx.clearRect(0, 0, width, height);
+
+      // Fixed Y scale based on total energy (0 to 1.1 * totalE)
+      const totalE = graphData.totalE[graphData.totalE.length - 1] || 1;
+      const yMax = totalE * 1.1;
+      const yMin = 0;
+      const yRange = yMax - yMin || 1;
+      const scaleY = plotHeight / yRange;
+      const yZero = padding.top + plotHeight; // Y=0 at bottom
+
+      // Time window
+      const maxTime = simTime;
+      const minTime = Math.max(0, maxTime - timeWindow);
+      
+      // Find indices for visible range
+      let startIdx = 0;
+      const times = graphData.time;
+      while (startIdx < times.length && times[startIdx] < minTime) startIdx++;
+      
+      if (times.length - startIdx < 2) return;
+
+      // Use motion graph's plot width for time axis alignment
+      const scaleX = motionPlotWidth / timeWindow;
+
+      // Draw grid
+      ctx.strokeStyle = '#eee';
+      ctx.lineWidth = 1;
+      
+      // Vertical grid lines (every period/4)
+      const gridTimeStep = currentPeriod / 4;
+      for (let t = Math.ceil(minTime / gridTimeStep) * gridTimeStep; t <= maxTime; t += gridTimeStep) {
+        const x = padding.left + (t - minTime) * scaleX;
+        ctx.beginPath();
+        ctx.moveTo(x, padding.top);
+        ctx.lineTo(x, height - padding.bottom);
+        ctx.stroke();
+      }
+      
+      // Horizontal grid lines (5 lines)
+      for (let i = 0; i <= 5; i++) {
+        const y = padding.top + (plotHeight / 5) * i;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(width - padding.right, y);
+        ctx.stroke();
+      }
+
+      // Draw axes
+      ctx.strokeStyle = '#999';
+      ctx.lineWidth = 1.5;
+      // Y axis
+      ctx.beginPath();
+      ctx.moveTo(padding.left, padding.top);
+      ctx.lineTo(padding.left, height - padding.bottom);
+      ctx.stroke();
+      // X axis (at Y=0)
+      ctx.beginPath();
+      ctx.moveTo(padding.left, yZero);
+      ctx.lineTo(width - padding.right, yZero);
+      ctx.stroke();
+
+      // Y-axis labels
+      ctx.fillStyle = '#666';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      for (let i = 0; i <= 5; i++) {
+        const val = yMax - yRange * (i / 5);
+        const y = padding.top + (plotHeight / 5) * i;
+        ctx.fillText(val.toFixed(2), padding.left - 8, y);
+      }
+
+      // X-axis labels - fractions of period
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      for (let t = Math.ceil(minTime / gridTimeStep) * gridTimeStep; t <= maxTime; t += gridTimeStep) {
+        const x = padding.left + (t - minTime) * scaleX;
+        const fraction = t / currentPeriod;
+        let label;
+        if (fraction === 0) {
+          label = '0';
+        } else if (Number.isInteger(fraction)) {
+          label = fraction === 1 ? 'T' : fraction + 'T';
+        } else if (Math.abs(fraction * 2 - Math.round(fraction * 2)) < 0.001) {
+          label = fraction.toFixed(1) + 'T';
+        } else if (Math.abs(fraction * 4 - Math.round(fraction * 4)) < 0.001) {
+          label = fraction.toFixed(2).replace('0.', '.') + 'T';
+        } else {
+          label = fraction.toFixed(2) + 'T';
+        }
+        ctx.fillText(label, x, height - padding.bottom + 4);
+      }
+
+      // Draw data lines for KE, PE, Total E
+      const series = [
+        { data: graphData.ke, color: systems[currentSystem].colors.ke, label: 'KE' },
+        { data: graphData.pe, color: systems[currentSystem].colors.pe, label: 'PE' },
+        { data: graphData.totalE, color: systems[currentSystem].colors.total, label: 'E' }
+      ];
+
+      series.forEach(s => {
+        const yData = s.data;
+        ctx.strokeStyle = s.color;
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        
+        let first = true;
+        for (let i = startIdx; i < times.length; i++) {
+          const x = padding.left + (times[i] - minTime) * scaleX;
+          const y = yZero - yData[i] * scaleY;
+          if (first) {
+            ctx.moveTo(x, y);
+            first = false;
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        ctx.stroke();
+      });
+
+      // Draw legend on graph (top-right)
+      series.forEach((s, i) => {
+        const legendX = width - padding.right + 10;
+        const legendY = padding.top + 10 + i * 20;
+        ctx.fillStyle = s.color;
+        ctx.fillRect(legendX, legendY, 15, 3);
+        ctx.fillStyle = '#333';
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(s.label, legendX + 20, legendY + 2);
+      });
+    }
+
+    // ============ ENERGY vs x GRAPH RENDERING ============
+    function renderEnergyXGraph(config, xRange) {
+      const ctx = config.ctx;
+      const canvas = config.canvas;
+      const width = canvas.width;
+      const height = canvas.height;
+      const padding = { top: 30, right: 100, bottom: 40, left: 60 };
+      const plotWidth = width - padding.left - padding.right;
+      const plotHeight = height - padding.top - padding.bottom;
+
+      ctx.clearRect(0, 0, width, height);
+
+      // Determine x-range based on system
+      let xMax, xMin;
+      if (currentSystem === 'spring') {
+        xMax = currentParams.amplitude;
+        xMin = -currentParams.amplitude;
+      } else {
+        // Pendulum: x = L * sin(theta), max theta = angle
+        xMax = currentParams.length * Math.sin(currentParams.angle);
+        xMin = -xMax;
+      }
+      const xRangeTotal = xMax - xMin;
+      
+      // Fixed Y scale based on total energy (0 to 1.1 * totalE)
+      const totalE = graphData.totalE[graphData.totalE.length - 1] || 1;
+      const yMax = totalE * 1.1;
+      const yMin = 0;
+      const yRange = yMax - yMin || 1;
+      const scaleY = plotHeight / yRange;
+      const yZero = padding.top + plotHeight; // Y=0 at bottom
+
+      // X-axis scaling
+      const scaleX = plotWidth / xRangeTotal;
+
+      // Draw grid
+      ctx.strokeStyle = '#eee';
+      ctx.lineWidth = 1;
+      
+      // Vertical grid lines (5 lines: -A, -A/2, 0, A/2, A)
+      for (let i = 0; i <= 5; i++) {
+        const frac = i / 5;
+        const x = padding.left + frac * plotWidth;
+        ctx.beginPath();
+        ctx.moveTo(x, padding.top);
+        ctx.lineTo(x, height - padding.bottom);
+        ctx.stroke();
+      }
+      
+      // Horizontal grid lines (5 lines)
+      for (let i = 0; i <= 5; i++) {
+        const y = padding.top + (plotHeight / 5) * i;
+        ctx.beginPath();
+        ctx.moveTo(padding.left, y);
+        ctx.lineTo(width - padding.right, y);
+        ctx.stroke();
+      }
+
+      // Draw axes
+      ctx.strokeStyle = '#999';
+      ctx.lineWidth = 1.5;
+      // Y axis
+      ctx.beginPath();
+      ctx.moveTo(padding.left, padding.top);
+      ctx.lineTo(padding.left, height - padding.bottom);
+      ctx.stroke();
+      // X axis (at Y=0)
+      ctx.beginPath();
+      ctx.moveTo(padding.left, yZero);
+      ctx.lineTo(width - padding.right, yZero);
+      ctx.stroke();
+
+      // X-axis labels: -A, 0, A
+      ctx.fillStyle = '#666';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      const amplitude = xMax;
+      const labels = [
+        { frac: 0, label: `-${amplitude.toFixed(2)}` },
+        { frac: 0.5, label: '0' },
+        { frac: 1, label: amplitude.toFixed(2) }
+      ];
+      labels.forEach(({ frac, label }) => {
+        const x = padding.left + frac * plotWidth;
+        ctx.fillText(label, x, height - padding.bottom + 4);
+      });
+
+      // Y-axis labels
+      ctx.fillStyle = '#666';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      for (let i = 0; i <= 5; i++) {
+        const val = yMax - (yMax - yMin) * (i / 5);
+        const y = padding.top + (plotHeight / 5) * i;
+        ctx.fillText(val.toFixed(2), padding.left - 8, y);
+      }
+
+      // Calculate energy curves analytically
+      const sys = systems[currentSystem];
+      
+      // Generate smooth curves
+      const numPoints = 200;
+      const xValues = [];
+      const keValues = [];
+      const peValues = [];
+      const totalEValues = [];
+      
+      for (let i = 0; i <= numPoints; i++) {
+        const frac = i / numPoints;
+        const x = xMin + frac * xRangeTotal;
+        xValues.push(x);
+        
+        let pe, ke;
+        if (currentSystem === 'spring') {
+          const k = currentParams.k;
+          pe = 0.5 * k * x * x;
+        } else {
+          const theta = Math.asin(x / currentParams.length);
+          const m = currentParams.mass;
+          const g = currentParams.g;
+          const L = currentParams.length;
+          pe = m * g * L * (1 - Math.cos(theta));
+        }
+        ke = totalE - pe;
+        
+        peValues.push(pe);
+        keValues.push(ke);
+        totalEValues.push(totalE);
+      }
+      
+      // Draw data lines for KE, PE, Total E
+      const series = [
+        { data: keValues, color: sys.colors.ke, label: 'KE' },
+        { data: peValues, color: sys.colors.pe, label: 'PE' },
+        { data: totalEValues, color: sys.colors.total, label: 'E' }
+      ];
+
+      series.forEach(s => {
+        const yData = s.data;
+        ctx.strokeStyle = s.color;
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        
+        let first = true;
+        for (let i = 0; i < numPoints; i++) {
+          const x = padding.left + (xValues[i] - xMin) * scaleX;
+          const y = yZero - yData[i] * scaleY;
+          if (first) {
+            ctx.moveTo(x, y);
+            first = false;
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        ctx.stroke();
+      });
+
+      // Draw legend on graph (top-right)
+      series.forEach((s, i) => {
+        const legendX = width - padding.right + 10;
+        const legendY = padding.top + 10 + i * 20;
+        ctx.fillStyle = s.color;
+        ctx.fillRect(legendX, legendY, 15, 3);
+        ctx.fillStyle = '#333';
+        ctx.font = '11px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(s.label, legendX + 20, legendY + 2);
+      });
+
+      // Draw current position marker on energy curves
+      if (graphData.displacement.length > 0) {
+        const currentX = graphData.displacement[graphData.displacement.length - 1];
+        
+        // Find the x index for current position
+        const xFraction = (currentX - xMin) / xRangeTotal;
+        const markerIdx = Math.round(xFraction * numPoints);
+        const clampedIdx = Math.max(0, Math.min(numPoints - 1, markerIdx));
+        
+        // Draw markers on each curve
+        const markerSeries = [
+          { data: keValues, color: sys.colors.ke, label: 'KE' },
+          { data: peValues, color: sys.colors.pe, label: 'PE' },
+          { data: totalEValues, color: sys.colors.total, label: 'E' }
+        ];
+        
+        markerSeries.forEach(s => {
+          const yData = s.data;
+          const y = yZero - yData[clampedIdx] * scaleY;
+          const x = padding.left + (currentX - xMin) * scaleX;
+          
+          ctx.fillStyle = s.color;
+          ctx.beginPath();
+          ctx.arc(x, y, 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        });
+        
+        // Label at current position
+        ctx.fillStyle = '#333';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`x = ${currentX.toFixed(3)} m`, padding.left + (currentX - xMin) * scaleX, padding.top - 5);
+      }
+    }
+
+    function renderVisibleGraphs() {
+      const timeWindow = 2 * currentPeriod;
+      window.graphConfigs.forEach(config => {
+        const key = config.id === 'energy' ? 'energy' : (config.id === 'energyX' ? 'energyX' : config.id);
+        if (graphVisibility[key]) {
+          if (config.type === 'energy') {
+            renderEnergyGraph(config, timeWindow);
+          } else if (config.type === 'energyX') {
+            renderEnergyXGraph(config, timeWindow);
+          } else {
+            renderGraph(config, timeWindow);
+          }
+        }
+      });
+    }
+
+    function updateGraphVisibility() {
+      const graphIds = ['displacement', 'velocity', 'acceleration', 'energy', 'energyX'];
+      graphIds.forEach(id => {
+        const wrapper = document.getElementById(`graph-${id}`);
+        if (wrapper) {
+          wrapper.classList.toggle('hidden', !graphVisibility[id]);
+        }
+      });
+    }
+
+    function updateLegend() {
+      const sys = systems[currentSystem];
+      const items = [
+        { key: 'displacement', label: 'x(t)' },
+        { key: 'velocity', label: 'v(t)' },
+        { key: 'acceleration', label: 'a(t)' },
+        { key: 'energy', label: 'Energy (KE, PE, E)' },
+        { key: 'energyX', label: 'Energy vs x' }
+      ];
+      
+      legendContainer.innerHTML = items
+        .filter(item => graphVisibility[item.key])
+        .map(item => `
+          <div class="legend-item">
+            <div class="legend-color" style="background: ${sys.colors[item.key === 'energyX' ? 'energy' : item.key]};"></div>
+            <span>${item.label}</span>
+          </div>
+        `).join('');
+    }
+
+    // ============ ANIMATION CANVAS ============
+    function drawAnimation(data) {
+      const ctx = animCtx;
+      const width = animCanvas.width;
+      const height = animCanvas.height;
+      const centerX = width / 2;
+      const centerY = height / 2;
+
+      ctx.clearRect(0, 0, width, height);
+
+      if (currentSystem === 'spring') {
+        drawMassSpring(data, width, height);
+      } else {
+        drawPendulum(data, width, height);
+      }
+    }
+
+    function drawMassSpring(data, width, height) {
+      const ctx = animCtx;
+      const centerX = width / 2;
+      const centerY = height / 2;
+      
+      // Scale factor for display - adjusted for smaller canvas (350x220)
+      const maxA = currentParams.amplitude;
+      const scale = Math.min(140, (width - 80) / (2 * maxA)) || 80;
+      
+      // Equilibrium position
+      const eqX = centerX;
+      
+      // Current position
+      const massX = eqX + data.x * scale;
+      const massY = centerY;
+      const massRadius = 20;
+
+      // Wall (left)
+      ctx.strokeStyle = '#666';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(30, centerY - 60);
+      ctx.lineTo(30, centerY + 60);
+      ctx.stroke();
+
+      // Spring
+      const springStartX = 30;
+      const springEndX = massX - massRadius;
+      const springY = centerY;
+      const springWidth = springEndX - springStartX;
+      const coils = 10;
+      const coilWidth = springWidth / coils;
+
+      ctx.strokeStyle = '#4a90d9';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(springStartX, springY);
+      
+      for (let i = 0; i < coils; i++) {
+        const x = springStartX + i * coilWidth;
+        const amplitude = (i % 2 === 0) ? 12 : -12;
+        if (i === 0) {
+          ctx.lineTo(x + coilWidth / 2, springY + amplitude);
+        } else {
+          ctx.lineTo(x, springY - amplitude);
+          ctx.lineTo(x + coilWidth, springY + amplitude);
+        }
+      }
+      ctx.lineTo(springEndX, springY);
+      ctx.stroke();
+
+      // Mass block
+      ctx.fillStyle = '#4a90d9';
+      ctx.fillRect(massX - massRadius, massY - massRadius, massRadius * 2, massRadius * 2);
+      
+      // Mass label
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${currentParams.mass.toFixed(1)} kg`, massX, massY);
+
+      // Equilibrium line (dashed)
+      ctx.strokeStyle = '#999';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(eqX, centerY - 45);
+      ctx.lineTo(eqX, centerY + 45);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Displacement arrow
+      if (Math.abs(data.x) > 0.01) {
+        const arrowStart = data.x > 0 ? eqX : massX + massRadius;
+        const arrowEnd = data.x > 0 ? massX - massRadius : eqX;
+        ctx.strokeStyle = '#dc3545';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(arrowStart, centerY - 55);
+        ctx.lineTo(arrowEnd, centerY - 55);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        // Arrow heads
+        const dir = data.x > 0 ? 1 : -1;
+        ctx.fillStyle = '#dc3545';
+        ctx.beginPath();
+        ctx.moveTo(arrowEnd, centerY - 55);
+        ctx.lineTo(arrowEnd - dir * 6, centerY - 62);
+        ctx.lineTo(arrowEnd - dir * 6, centerY - 48);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Label
+        ctx.fillStyle = '#dc3545';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`x = ${data.x.toFixed(3)} m`, centerX, centerY - 68);
+      }
+    }
+
+    function drawPendulum(data, width, height) {
+      const ctx = animCtx;
+      const pivotX = width / 2;
+      const pivotY = 40;
+      
+      // Scale length for display - adjusted for smaller canvas
+      const displayLength = Math.min(140, height - 70);
+      
+      const theta = data.x / currentParams.length;  // theta = x / L
+      const bobX = pivotX + displayLength * Math.sin(theta);
+      const bobY = pivotY + displayLength * Math.cos(theta);
+      const bobRadius = 18;
+
+      // Ceiling
+      ctx.strokeStyle = '#666';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(pivotX - 60, pivotY - 10);
+      ctx.lineTo(pivotX + 60, pivotY - 10);
+      ctx.stroke();
+
+      // Pivot
+      ctx.fillStyle = '#666';
+      ctx.beginPath();
+      ctx.arc(pivotX, pivotY, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // String
+      ctx.strokeStyle = '#666';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(pivotX, pivotY);
+      ctx.lineTo(bobX, bobY);
+      ctx.stroke();
+
+      // Bob
+      const grad = ctx.createRadialGradient(bobX - 6, bobY - 6, 0, bobX, bobY, bobRadius);
+      grad.addColorStop(0, '#f8bbd0');
+      grad.addColorStop(1, '#e91e63');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(bobX, bobY, bobRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#c2185b';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Mass label
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(`${currentParams.mass.toFixed(1)} kg`, bobX, bobY);
+
+      // Angle arc
+      if (Math.abs(theta) > 0.01) {
+        const arcRadius = 45;
+        const startAngle = -Math.PI / 2;
+        const endAngle = startAngle + theta;
+        
+        ctx.strokeStyle = '#e91e63';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.arc(pivotX, pivotY, arcRadius, startAngle, endAngle);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        // Angle label
+        const labelAngle = startAngle + theta / 2;
+        const labelX = pivotX + (arcRadius + 15) * Math.cos(labelAngle);
+        const labelY = pivotY + (arcRadius + 15) * Math.sin(labelAngle);
+        ctx.fillStyle = '#e91e63';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`θ = ${theta.toFixed(3)} rad`, labelX, labelY);
+      }
+
+      // Equilibrium line
+      ctx.strokeStyle = '#999';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(pivotX, pivotY);
+      ctx.lineTo(pivotX, pivotY + displayLength + 15);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // ============ SIMULATION CONTROL ============
+    function startSimulation() {
+      if (isPlaying) return;
+      isPlaying = true;
+      lastFrameTime = 0;
+      btnPlay.style.display = 'none';
+      btnPause.style.display = 'inline-block';
+      animationId = requestAnimationFrame(animate);
+    }
+
+    function pauseSimulation() {
+      isPlaying = false;
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+      btnPlay.style.display = 'inline-block';
+      btnPause.style.display = 'none';
+    }
+
+    function resetSimulation() {
+      pauseSimulation();
+      simTime = 0;
+      clearGraphData();
+      // Re-initialize params from inputs
+      updateParamsFromInputs();
+      // Initial physics computation
+      const data = computePhysics(0);
+      currentPeriod = data.period;
+      drawAnimation(data);
+      updateInfoPanel(data);
+      renderVisibleGraphs();
+    }
+
+    function restartSimulation() {
+      pauseSimulation();
+      simTime = 0;
+      clearGraphData();
+      updateParamsFromInputs();
+      const data = computePhysics(0);
+      currentPeriod = data.period;
+      drawAnimation(data);
+      updateInfoPanel(data);
+      renderVisibleGraphs();
+    }
+
+    function animate(timestamp) {
+      if (!isPlaying) return;
+      
+      if (lastFrameTime === 0) lastFrameTime = timestamp;
+      const dt = Math.min((timestamp - lastFrameTime) / 1000, 0.05);
+      lastFrameTime = timestamp;
+      
+      simTime += dt * 0.5;
+      
+      // Compute physics
+      const data = computePhysics(simTime);
+      currentPeriod = data.period;
+      
+      // Add to graph data
+      addDataPoint(simTime, data);
+      
+      // Update displays
+      updateInfoPanel(data);
+      drawAnimation(data);
+      renderVisibleGraphs();
+      
+      animationId = requestAnimationFrame(animate);
+    }
+
+    function updateInfoPanel(data) {
+      timeDisplay.textContent = simTime.toFixed(2);
+      periodDisplay.textContent = data.period.toFixed(2);
+      omegaDisplay.textContent = data.omega.toFixed(2);
+      energyDisplay.textContent = data.totalE.toFixed(2);
+    }
+
+    // ============ INITIALIZE ============
+    init();
+  </script>
+</body>
+</html>
