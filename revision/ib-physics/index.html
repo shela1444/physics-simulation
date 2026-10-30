@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="data:,">
 <title>IB Physics - Things Must Not be Forgotten</title>
 <style>
 :root{
@@ -117,6 +118,23 @@ h2.q{font-size:21px;line-height:1.4;margin:8px 0 6px;letter-spacing:-.2px;overfl
 .imgmodal-close{position:fixed;top:14px;right:14px;z-index:70;border:1px solid rgba(255,255,255,.7);background:#172033;color:#fff;border-radius:10px;padding:8px 12px;font-weight:800;box-shadow:0 4px 14px rgba(0,0,0,.35)}
 body.locked{overflow:hidden}
 
+/* ---------- level gate ---------- */
+.levelbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:13px;padding:10px 13px;margin:0 0 18px;box-shadow:0 4px 14px rgba(21,32,64,.04)}
+.levelbadge{display:inline-flex;align-items:center;justify-content:center;min-width:42px;height:34px;border-radius:10px;background:var(--brand);color:#fff;font-size:15px;font-weight:900;letter-spacing:.3px}
+.levelcopy{flex:1;min-width:180px}.levelcopy b{display:block;font-size:13px}.levelcopy span{display:block;font-size:11px;color:var(--muted)}
+.levelgate{max-width:850px;margin:10px auto 30px;padding:22px}
+.levelgate h2{font-size:23px;margin:0 0 5px;letter-spacing:-.3px}
+.levelgate p{margin:0 0 16px;color:var(--muted);font-size:13px}
+.levelchoices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.levelchoice{text-align:left;border:1px solid var(--line);background:#fff;border-radius:15px;padding:18px;cursor:pointer;transition:.15s;box-shadow:0 4px 14px rgba(21,32,64,.04)}
+.levelchoice:hover{transform:translateY(-2px);border-color:#9fb4ff;box-shadow:0 9px 24px rgba(21,32,64,.09)}
+.levelchoice .big{font-size:31px;font-weight:900;color:var(--brand);line-height:1}
+.levelchoice .name{font-size:14px;font-weight:900;margin:3px 0 7px}
+.levelchoice .count{font-size:12px;font-weight:800;color:#344054}
+.levelchoice .desc{font-size:11px;color:var(--muted);line-height:1.45;margin-top:4px}
+.levelnote{font-size:11px;color:var(--muted);margin:14px 0 0!important}
+@media(max-width:600px){.levelgate{padding:16px}.levelchoices{grid-template-columns:1fr}.levelbar{padding:9px 10px}.levelbadge{height:31px;min-width:38px;font-size:14px}.levelcopy span{font-size:10px}}
+
 /* ---------- mobile refinements ---------- */
 html,body{overflow-x:hidden}
 body{-webkit-text-size-adjust:100%}
@@ -198,11 +216,14 @@ const THEMES = {
   T:'Mathematics (units and measurement)'
 };
 
+const LEVEL_KEY='ib-quiz-level';
+const savedLevel=localStorage.getItem(LEVEL_KEY);
 const state = {
   view:'topics',
   mode:'topic',
   selection:null,
   label:'',
+  level:(savedLevel==='SL'||savedLevel==='HL')?savedLevel:null,
   round:[],
   index:0,
   selected:new Set(),
@@ -215,16 +236,73 @@ const state = {
 function esc(s){return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function shuffle(a){const r=a.slice();for(let i=r.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[r[i],r[j]]=[r[j],r[i]];}return r;}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2100);}
-function questionsFor(code){return DATA.questions.filter(q=>q.topic===code);}
+function questionLevel(q){
+  const l=(q.label||'').toLowerCase();
+  if(l.includes('hl only')) return 'HL';
+  if(l.includes('sl only')) return 'SL';
+  return 'BOTH';
+}
+function levelAllowed(q,level){
+  if(level==='HL') return true;
+  return questionLevel(q)!=='HL';
+}
+function levelQuestionsFor(level){return DATA.questions.filter(q=>levelAllowed(q,level));}
+function levelQuestions(){return levelQuestionsFor(state.level);}
+function questionsFor(code){return levelQuestions().filter(q=>q.topic===code);}
 function topicTitle(code){const t=DATA.topics.find(x=>x[0]===code);return t?t[1]:code;}
 function countFor(code){return questionsFor(code).length;}
-function questionsForTheme(L){return DATA.questions.filter(q=>q.topic[0]===L);}
+function questionsForTheme(L){return levelQuestions().filter(q=>q.topic[0]===L);}
 function countForTheme(L){return questionsForTheme(L).length;}
 function isMC(q){return q.kind==='mc';}
-function mcQuestions(){return DATA.questions.filter(isMC);}
+function mcQuestions(){return levelQuestions().filter(isMC);}
+
+function setLevel(level){
+  if(level!=='SL'&&level!=='HL') return;
+  state.level=level;
+  localStorage.setItem(LEVEL_KEY,level);
+  renderTopics();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function changeLevel(){
+  state.level=null;
+  localStorage.removeItem(LEVEL_KEY);
+  renderTopics();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function renderLevelChooser(){
+  const ct=document.getElementById('changeTopicBtn'); if(ct) ct.classList.add('hidden');
+  const sl=levelQuestionsFor('SL'), hl=levelQuestionsFor('HL');
+  const slMc=sl.filter(isMC).length, hlMc=hl.filter(isMC).length;
+  document.getElementById('app').innerHTML=`
+    <div class="hero">
+      <h1>IB Physics - Things Must Not be Forgotten</h1>
+      <p>Choose your study level to begin.</p>
+    </div>
+    <div class="card levelgate">
+      <h2>Choose your level</h2>
+      <p>Your choice filters every topic and mixed round. You can change it later.</p>
+      <div class="levelchoices">
+        <button class="levelchoice" onclick="setLevel('SL')">
+          <div class="big">SL</div>
+          <div class="name">Standard Level</div>
+          <div class="count">${sl.length} questions</div>
+          <div class="desc">${sl.length-slMc} recall + ${slMc} Paper 1 MC. HL-only content is hidden.</div>
+        </button>
+        <button class="levelchoice" onclick="setLevel('HL')">
+          <div class="big">HL</div>
+          <div class="name">Higher Level</div>
+          <div class="count">${hl.length} questions</div>
+          <div class="desc">${hl.length-hlMc} recall + ${hlMc} Paper 1 MC. Includes SL and HL content.</div>
+        </button>
+      </div>
+      <p class="levelnote">This choice is saved on this device.</p>
+    </div>`;
+}
 
 /* ---------- topic page ---------- */
 function renderTopics(){
+  if(!state.level){renderLevelChooser();return;}
   const ct=document.getElementById('changeTopicBtn'); if(ct) ct.classList.add('hidden');
   const themes={};
   DATA.topics.forEach(([code,title])=>{
@@ -234,9 +312,9 @@ function renderTopics(){
   const order=['A','B','C','D','E','T'];
   const mixCards=order.map(L=>{
     const n=countForTheme(L);
-    const disabled=n===0;
-    const countText=disabled?'No questions available':(n<=10?`All ${n} question${n===1?'':'s'}`:`10 random from ${n} questions`);
-    return `<button class="topic ${disabled?'disabled':''}" ${disabled?'disabled':`onclick="startMixed('${L}')"`}>
+    if(n===0) return '';
+    const countText=n<=10?`All ${n} question${n===1?'':'s'}`:`10 random from ${n} questions`;
+    return `<button class="topic" onclick="startMixed('${L}')">
       <div class="code">MIX ${L}</div>
       <div class="name">${esc(THEMES[L])}</div>
       <div class="count">${countText}</div>
@@ -246,35 +324,40 @@ function renderTopics(){
   const mcCard=mcN?`<button class="topic" onclick="startMCMix()">
       <div class="code">P1 MC</div>
       <div class="name">Paper 1 Definition MC</div>
-      <div class="count">10 random from ${mcN} questions</div>
+      <div class="count">${mcN<=10?`All ${mcN} questions`:`10 random from ${mcN} questions`}</div>
     </button>`:'';
-  const allCount=DATA.questions.length;
-  const allDisabled=allCount===0;
-  const allCountText=allDisabled?'No questions available':(allCount<=10?`All ${allCount} questions`:`10 random from ${allCount} questions`);
-  const allCard=`<button class="topic ${allDisabled?'disabled':''}" ${allDisabled?'disabled':`onclick="startMixed('ALL')"`}>
+  const allCount=levelQuestions().length;
+  const allCountText=allCount<=10?`All ${allCount} questions`:`10 random from ${allCount} questions`;
+  const allCard=allCount?`<button class="topic" onclick="startMixed('ALL')">
       <div class="code">MIX ALL</div>
       <div class="name">All topics</div>
       <div class="count">${allCountText}</div>
-    </button>`;
+    </button>`:'';
   const sections=order.map(L=>{
     if(!themes[L]) return '';
     const cards=themes[L].map(([code,title])=>{
       const n=countFor(code);
-      const disabled=n===0;
-      return `<button class="topic ${disabled?'disabled':''}" ${disabled?'disabled':`onclick="startTopic('${code}')"`}>
+      if(n===0) return '';
+      return `<button class="topic" onclick="startTopic('${code}')">
         <div class="code">${code}</div>
         <div class="name">${esc(title)} (${n} question${n===1?'':'s'})</div>
-        <div class="count">${disabled?'No questions available':'All questions shown'}</div>
+        <div class="count">All questions shown</div>
       </button>`;
-    }).join('');
+    }).filter(Boolean).join('');
+    if(!cards) return '';
     const label=L==='T'?'Tools':`Theme ${L}`;
     return `<h2 class="theme">${label} — ${esc(THEMES[L])}</h2><div class="grid">${cards}</div>`;
   }).join('');
-  const recallN=DATA.questions.length-mcN;
+  const recallN=allCount-mcN;
   document.getElementById('app').innerHTML=`
     <div class="hero">
       <h1>IB Physics - Things Must Not be Forgotten</h1>
       <p>${recallN} recall + ${mcN} Paper 1 MC · choose a topic or quick round.</p>
+    </div>
+    <div class="levelbar">
+      <div class="levelbadge">${state.level}</div>
+      <div class="levelcopy"><b>${state.level==='SL'?'Standard Level':'Higher Level'} mode</b><span>${state.level==='SL'?'Showing shared SL+HL and SL-only questions. HL-only content is hidden.':'Showing all SL, shared and HL questions.'}</span></div>
+      <button class="btn ghost" onclick="changeLevel()">Change level</button>
     </div>
     <h2 class="theme">Mixed practice</h2>
     <div class="grid">${mcCard}${mixCards}${allCard}</div>
@@ -305,7 +388,7 @@ function startTopic(code){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function startMixed(scope){
-  const qs=scope==='ALL'?DATA.questions:questionsForTheme(scope);
+  const qs=scope==='ALL'?levelQuestions():questionsForTheme(scope);
   if(!qs.length){toast('No questions in this selection.');return;}
   state.mode=scope==='ALL'?'all':'theme';
   state.selection=scope;
