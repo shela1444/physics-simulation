@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="data:,">
-<title>IB Physics - Things Must Not be Forgotten</title>
+<title>Things to be Remembered</title>
 <style>
 :root{
   --bg:#f4f6fb; --card:#fff; --ink:#172033; --muted:#667085; --line:#dfe4ee;
@@ -192,7 +192,7 @@ body{-webkit-text-size-adjust:100%}
 <header class="topbar">
   <div class="topbar-in">
     <div class="brand">
-      <b>IB Physics - Things Must Not be Forgotten</b>
+      <b>Things to be Remembered</b>
       <span>IB Physics Paper 1 + Paper 2 · topic quiz</span>
     </div>
     <button class="btn ghost hidden" id="changeTopicBtn" onclick="goTopics()">Change topic</button>
@@ -276,7 +276,7 @@ function renderLevelChooser(){
   const slMc=sl.filter(isMC).length, hlMc=hl.filter(isMC).length;
   document.getElementById('app').innerHTML=`
     <div class="hero">
-      <h1>IB Physics - Things Must Not be Forgotten</h1>
+      <h1>Things to be Remembered</h1>
       <p>Choose your study level to begin.</p>
     </div>
     <div class="card levelgate">
@@ -346,7 +346,7 @@ function renderTopics(){
   const recallN=allCount-mcN;
   document.getElementById('app').innerHTML=`
     <div class="hero">
-      <h1>IB Physics - Things Must Not be Forgotten</h1>
+      <h1>Things to be Remembered</h1>
       <p>${recallN} recall + ${mcN} Paper 1 MC · choose a topic or quick round.</p>
     </div>
     <div class="levelbar">
