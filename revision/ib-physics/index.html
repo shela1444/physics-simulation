@@ -313,7 +313,7 @@ function renderTopics(){
   const mixCards=order.map(L=>{
     const n=countForTheme(L);
     if(n===0) return '';
-    const countText=n<=10?`All ${n} question${n===1?'':'s'}`:`10 random from ${n} questions`;
+    const countText=n<=5?`All ${n} question${n===1?'':'s'}`:`5 random from ${n} questions`;
     return `<button class="topic" onclick="startMixed('${L}')">
       <div class="code">MIX ${L}</div>
       <div class="name">${esc(THEMES[L])}</div>
@@ -321,13 +321,8 @@ function renderTopics(){
     </button>`;
   }).join('');
   const mcN=mcQuestions().length;
-  const mcCard=mcN?`<button class="topic" onclick="startMCMix()">
-      <div class="code">P1 MC</div>
-      <div class="name">Paper 1 Definition MC</div>
-      <div class="count">${mcN<=10?`All ${mcN} questions`:`10 random from ${mcN} questions`}</div>
-    </button>`:'';
   const allCount=levelQuestions().length;
-  const allCountText=allCount<=10?`All ${allCount} questions`:`10 random from ${allCount} questions`;
+  const allCountText=allCount<=5?`All ${allCount} questions`:`5 random from ${allCount} questions`;
   const allCard=allCount?`<button class="topic" onclick="startMixed('ALL')">
       <div class="code">MIX ALL</div>
       <div class="name">All topics</div>
@@ -360,7 +355,7 @@ function renderTopics(){
       <button class="btn ghost" onclick="changeLevel()">Change level</button>
     </div>
     <h2 class="theme">Mixed practice</h2>
-    <div class="grid">${mcCard}${mixCards}${allCard}</div>
+    <div class="grid">${mixCards}${allCard}</div>
     ${sections}`;
 }
 
@@ -393,21 +388,7 @@ function startMixed(scope){
   state.mode=scope==='ALL'?'all':'theme';
   state.selection=scope;
   state.label=scope==='ALL'?'all topics':`Theme ${scope} — ${THEMES[scope]}`;
-  state.round=shuffle(qs).slice(0,10);
-  state.index=0;
-  state.answers=[];
-  state.selected=new Set();
-  state.revealed=false;
-  state.options=makeOptions(currentQ());
-  state.view='quiz';
-  renderQuiz();
-  window.scrollTo({top:0,behavior:'smooth'});
-}
-function startMCMix(){
-  const qs=mcQuestions();
-  if(!qs.length){toast('No Paper 1 MC questions available.');return;}
-  state.mode='mc'; state.selection='MC'; state.label='Paper 1 Definition MC';
-  state.round=shuffle(qs).slice(0,10);
+  state.round=shuffle(qs).slice(0,5);
   state.index=0;
   state.answers=[];
   state.selected=new Set();
@@ -586,24 +567,21 @@ function goTopics(){state.view='topics';state.mode='topic';state.selection=null;
 /* ---------- completion / retry ---------- */
 function completionScope(){
   if(state.mode==='topic') return `all the questions in topic ${state.label}`;
-  if(state.mode==='mc') return 'this Paper 1 definition MC round';
   if(state.mode==='theme') return `this mixed round from ${state.label}`;
   return 'this mixed round from all topics';
 }
 function retryScope(){
   if(state.mode==='topic') return `topic ${state.label}`;
-  if(state.mode==='mc') return 'this Paper 1 definition MC round';
   if(state.mode==='theme') return `this mixed round from ${state.label}`;
   return 'this mixed round from all topics';
 }
 function replaySelection(){
   if(state.mode==='topic') startTopic(state.selection);
-  else if(state.mode==='mc') startMCMix();
   else startMixed(state.selection);
 }
 function renderComplete(){
   const ct=document.getElementById('changeTopicBtn'); if(ct) ct.classList.remove('hidden');
-  const redo=state.mode==='topic'?'Redo this topic':state.mode==='mc'?'New MC round':'New mixed round';
+  const redo=state.mode==='topic'?'Redo this topic':'New mixed round';
   document.getElementById('app').innerHTML=`
     <div class="card result">
       <h1>Yay you have finished ${esc(completionScope())}!! (Please screencap)</h1>
@@ -619,7 +597,7 @@ function renderRetry(){
   const correct=state.answers.filter(a=>a.result==='correct').length;
   const almost=state.answers.filter(a=>a.result==='almost').length;
   const learn=state.answers.filter(a=>a.result==='learn').length;
-  const retry=state.mode==='topic'?'Try again':state.mode==='mc'?'New MC round':'New mixed round';
+  const retry=state.mode==='topic'?'Try again':'New mixed round';
   document.getElementById('app').innerHTML=`
     <div class="card result">
       <h1>Not quite yet!</h1>
