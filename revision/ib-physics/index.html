@@ -36,6 +36,10 @@ main{max-width:1050px;margin:0 auto;padding:24px 20px 60px}
 @media(max-width:520px){.grid{grid-template-columns:1fr}.hero h1{font-size:27px}}
 .topic{text-align:left;background:var(--card);border:1px solid var(--line);border-radius:15px;padding:15px 15px 13px;box-shadow:0 4px 14px rgba(21,32,64,.04);transition:.16s;position:relative;overflow:hidden}
 .topic:hover{transform:translateY(-2px);border-color:#b8c3dd;box-shadow:0 8px 22px rgba(21,32,64,.08)}
+.topic-choice{display:flex;flex-direction:column;justify-content:space-between;gap:10px}
+.topic-choice:hover{transform:none;border-color:var(--line);box-shadow:0 4px 14px rgba(21,32,64,.04)}
+.topic-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
+.topic-actions .btn{padding:6px 9px;font-size:11px;border-radius:8px}
 .topic .code{font-size:11px;font-weight:800;color:var(--brand);letter-spacing:.4px}
 .topic .name{font-size:14px;font-weight:800;margin:2px 0 4px;line-height:1.25;overflow-wrap:anywhere}
 .topic .count{font-size:11.5px;color:var(--muted)}
@@ -329,22 +333,22 @@ function renderTopics(){
       <div class="name">All topics</div>
       <div class="count">${allCountText}</div>
     </button>`:'';
-  const easyCountText=recallN<=5?`All ${recallN} question${recallN===1?'':'s'}`:`5 random from ${recallN} questions`;
-  const easyCard=recallN?`<button class="topic" onclick="startEasyAll()">
-      <div class="code">EASY</div>
-      <div class="name">All topics — recall only</div>
-      <div class="count">${easyCountText}</div>
-    </button>`:'';
   const sections=order.map(L=>{
     if(!themes[L]) return '';
     const cards=themes[L].map(([code,title])=>{
       const n=countFor(code);
       if(n===0) return '';
-      return `<button class="topic" onclick="startTopic('${code}')">
-        <div class="code">${code}</div>
-        <div class="name">${esc(title)} (${n} question${n===1?'':'s'})</div>
-        <div class="count">All questions shown</div>
-      </button>`;
+      return `<div class="topic topic-choice">
+        <div>
+          <div class="code">${code}</div>
+          <div class="name">${esc(title)}</div>
+          <div class="count">${n} question${n===1?'':'s'} · ${n>5?'choose all or 5 random':'all shown'}</div>
+        </div>
+        <div class="topic-actions">
+          <button class="btn ghost" type="button" onclick="startTopic('${code}')">All questions</button>
+          ${n>5?`<button class="btn primary" type="button" onclick="startTopic('${code}', true)">5 random</button>`:''}
+        </div>
+      </div>`;
     }).filter(Boolean).join('');
     if(!cards) return '';
     const label=L==='T'?'Tools':`Theme ${L}`;
@@ -361,7 +365,7 @@ function renderTopics(){
       <button class="btn ghost" onclick="changeLevel()">Change level</button>
     </div>
     <h2 class="theme">Mixed practice</h2>
-    <div class="grid">${mixCards}${allCard}${easyCard}</div>
+    <div class="grid">${mixCards}${allCard}</div>
     ${sections}`;
 }
 
@@ -374,11 +378,14 @@ function makeOptions(q){
   q.distractors.forEach(t=>arr.push({text:t,group:null,correct:false}));
   return shuffle(arr);
 }
-function startTopic(code){
+function startTopic(code, quick=false){
   const qs=questionsFor(code);
   if(!qs.length){toast('No questions in this topic.');return;}
-  state.mode='topic'; state.selection=code; state.label=`${code} — ${topicTitle(code)}`;
-  state.round=qs.slice();
+  const useQuick=!!quick && qs.length>5;
+  state.mode=useQuick?'topic-quick':'topic';
+  state.selection=code;
+  state.label=`${code} — ${topicTitle(code)}`;
+  state.round=useQuick?shuffle(qs).slice(0,5):qs.slice();
   state.index=0;
   state.answers=[];
   state.selected=new Set();
@@ -394,20 +401,6 @@ function startMixed(scope){
   state.mode=scope==='ALL'?'all':'theme';
   state.selection=scope;
   state.label=scope==='ALL'?'all topics':`Theme ${scope} — ${THEMES[scope]}`;
-  state.round=shuffle(qs).slice(0,5);
-  state.index=0;
-  state.answers=[];
-  state.selected=new Set();
-  state.revealed=false;
-  state.options=makeOptions(currentQ());
-  state.view='quiz';
-  renderQuiz();
-  window.scrollTo({top:0,behavior:'smooth'});
-}
-function startEasyAll(){
-  const qs=levelQuestions().filter(q=>!isMC(q));
-  if(!qs.length){toast('No recall questions in this selection.');return;}
-  state.mode='easy'; state.selection='EASY'; state.label='all topics — recall only';
   state.round=shuffle(qs).slice(0,5);
   state.index=0;
   state.answers=[];
@@ -588,23 +581,23 @@ function goTopics(){state.view='topics';state.mode='topic';state.selection=null;
 function completionScope(){
   if(state.mode==='topic') return `all the questions in topic ${state.label}`;
   if(state.mode==='theme') return `this mixed round from ${state.label}`;
-  if(state.mode==='easy') return 'this easy recall round from all topics';
+  if(state.mode==='topic-quick') return `this 5-question round from topic ${state.label}`;
   return 'this mixed round from all topics';
 }
 function retryScope(){
   if(state.mode==='topic') return `topic ${state.label}`;
   if(state.mode==='theme') return `this mixed round from ${state.label}`;
-  if(state.mode==='easy') return 'this easy recall round from all topics';
+  if(state.mode==='topic-quick') return `this 5-question round from topic ${state.label}`;
   return 'this mixed round from all topics';
 }
 function replaySelection(){
   if(state.mode==='topic') startTopic(state.selection);
-  else if(state.mode==='easy') startEasyAll();
+  else if(state.mode==='topic-quick') startTopic(state.selection,true);
   else startMixed(state.selection);
 }
 function renderComplete(){
   const ct=document.getElementById('changeTopicBtn'); if(ct) ct.classList.remove('hidden');
-  const redo=state.mode==='topic'?'Redo this topic':state.mode==='easy'?'New easy round':'New mixed round';
+  const redo=state.mode==='topic'?'Redo this topic':state.mode==='topic-quick'?'New 5-question round':'New mixed round';
   document.getElementById('app').innerHTML=`
     <div class="card result">
       <h1>Yay you have finished ${esc(completionScope())}!! (Please screencap)</h1>
@@ -620,7 +613,7 @@ function renderRetry(){
   const correct=state.answers.filter(a=>a.result==='correct').length;
   const almost=state.answers.filter(a=>a.result==='almost').length;
   const learn=state.answers.filter(a=>a.result==='learn').length;
-  const retry=state.mode==='topic'?'Try again':state.mode==='easy'?'New easy round':'New mixed round';
+  const retry=state.mode==='topic'?'Try again':state.mode==='topic-quick'?'New 5-question round':'New mixed round';
   document.getElementById('app').innerHTML=`
     <div class="card result">
       <h1>Not quite yet!</h1>
