@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Coverage and answer key for the Symbol Sense IB Physics data booklet quiz.">
+  <meta name="color-scheme" content="light">
+  <title>Coverage &amp; answer key — Symbol Sense</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+  <a class="skip-link" href="#coverage-main">Skip to content</a>
+
+  <div class="page-shell">
+    <header class="topbar">
+      <a class="brand" href="index.html" aria-label="Symbol Sense home">
+        <span class="brand-mark" aria-hidden="true">σ</span>
+        <span class="brand-copy">
+          <span class="brand-name">Symbol Sense</span>
+          <span class="brand-sub">IB Physics · 2025</span>
+        </span>
+      </a>
+      <nav class="topnav" aria-label="Site">
+        <a href="index.html">Practice</a>
+        <a href="index.html#how-it-works">How it works</a>
+      </nav>
+    </header>
+
+    <main id="coverage-main">
+      <section class="coverage-hero">
+        <p class="eyebrow">Content audit · v1.2</p>
+        <h1>Every equation. Every symbol.</h1>
+        <p class="coverage-lede">
+          This page is the human-readable answer key and coverage manifest. It lists all
+          130 printed equation lines in themes A–E, their source page, level, and the
+          meaning of every symbol prompt used in the quiz.
+        </p>
+        <div class="coverage-stat-row" id="coverage-stats" aria-live="polite"></div>
+        <p class="coverage-disclaimer">
+          The IB data booklet does not publish a symbol key. These meanings are authored
+          from the physics and the 2025 guide; they are not an official IB answer key.
+          C.4 and E.4 print no equations in this edition. The quiz also accepts common
+          definitional equivalents such as “mass per unit volume” for density.
+        </p>
+      </section>
+
+      <section class="coverage-controls" aria-label="Filter coverage">
+        <div class="coverage-search-wrap">
+          <label class="filter-label" for="coverage-search">Search</label>
+          <input
+            id="coverage-search"
+            class="coverage-search"
+            type="search"
+            placeholder="Search equation, topic, symbol, or answer…"
+            autocomplete="off"
+          >
+        </div>
+        <div>
+          <label class="filter-label" for="coverage-theme">Theme</label>
+          <select id="coverage-theme" class="coverage-select">
+            <option value="all">All themes</option>
+            <option value="A">A · Space, time and motion</option>
+            <option value="B">B · The particulate nature of matter</option>
+            <option value="C">C · Wave behaviour</option>
+            <option value="D">D · Fields</option>
+            <option value="E">E · Nuclear and quantum physics</option>
+          </select>
+        </div>
+        <div>
+          <label class="filter-label" for="coverage-level">Level</label>
+          <select id="coverage-level" class="coverage-select">
+            <option value="all">All levels</option>
+            <option value="core">SL/HL</option>
+            <option value="ahl">HL only</option>
+          </select>
+        </div>
+        <div class="coverage-expand-actions">
+          <button class="text-button" id="expand-all" type="button">Expand all</button>
+          <button class="text-button" id="collapse-all" type="button">Collapse all</button>
+        </div>
+      </section>
+
+      <p class="coverage-result-line" id="coverage-result-line" aria-live="polite"></p>
+      <div class="coverage-list" id="coverage-list"></div>
+      <p class="empty-results" id="coverage-empty" hidden>No equations match those filters.</p>
+    </main>
+
+    <footer class="footer">
+      <div>
+        <strong>Symbol Sense</strong>
+        <span>Independent study tool. Not affiliated with or endorsed by the IB.</span>
+      </div>
+      <div class="footer-links">
+        <a href="index.html">Practice</a>
+        <a href="review.html">Review workspace</a>
+        <a href="data/curriculum.js">View data source</a>
+      </div>
+    </footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script src="data/curriculum.js"></script>
+  <script src="assets/js/render.js"></script>
+  <script src="assets/js/coverage.js"></script>
+</body>
+</html>

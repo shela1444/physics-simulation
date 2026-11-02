@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Answer-key review workspace for Symbol Sense.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="color-scheme" content="light">
+  <title>Answer review — Symbol Sense</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+  <link rel="stylesheet" href="assets/css/review.css">
+</head>
+<body>
+  <a class="skip-link" href="#review-main">Skip to content</a>
+
+  <div class="page-shell">
+    <header class="topbar">
+      <a class="brand" href="index.html" aria-label="Symbol Sense home">
+        <span class="brand-mark" aria-hidden="true">σ</span>
+        <span class="brand-copy">
+          <span class="brand-name">Symbol Sense</span>
+          <span class="brand-sub">IB Physics · 2025</span>
+        </span>
+      </a>
+      <nav class="topnav" aria-label="Site">
+        <a href="index.html">Practice</a>
+        <a href="coverage.html">Coverage</a>
+      </nav>
+    </header>
+
+    <main id="review-main">
+      <section class="review-hero">
+        <div>
+          <p class="eyebrow">Private review workspace · noindex</p>
+          <h1>Review the answer key.</h1>
+          <p class="review-lede">
+            Edit canonical answers, accepted aliases, and units. Draft changes stay in this
+            browser until you download the updated data file and replace <code>data/curriculum.js</code>.
+          </p>
+        </div>
+        <aside class="review-progress-card" aria-label="Review progress">
+          <div class="review-progress-top">
+            <span>Reviewed</span>
+            <strong id="review-progress-text">0 / 482</strong>
+          </div>
+          <div class="review-progress-track" aria-hidden="true">
+            <span id="review-progress-fill"></span>
+          </div>
+          <div class="review-progress-meta">
+            <span><strong id="review-changed-count">0</strong> changed</span>
+            <span><strong id="review-flagged-count">0</strong> flagged</span>
+            <span><strong id="review-risk-count">0</strong> risk</span>
+          </div>
+        </aside>
+      </section>
+
+      <section class="review-panel" aria-labelledby="review-controls-heading">
+        <div class="review-panel-head">
+          <div>
+            <p class="section-kicker">Answer set</p>
+            <h2 id="review-controls-heading">Find and edit</h2>
+          </div>
+          <p class="review-draft-note">
+            Drafts save locally. Export when you are ready to commit.
+          </p>
+        </div>
+
+        <div class="review-filter-grid">
+          <div class="review-search-wrap">
+            <label class="filter-label" for="review-search">Search</label>
+            <input
+              id="review-search"
+              class="review-input"
+              type="search"
+              placeholder="Equation, symbol, answer, alias, or unit…"
+              autocomplete="off"
+            >
+          </div>
+          <div>
+            <label class="filter-label" for="review-theme">Theme</label>
+            <select id="review-theme" class="review-input">
+              <option value="all">All themes</option>
+              <option value="A">A · Motion</option>
+              <option value="B">B · Matter</option>
+              <option value="C">C · Waves</option>
+              <option value="D">D · Fields</option>
+              <option value="E">E · Quantum</option>
+            </select>
+          </div>
+          <div>
+            <label class="filter-label" for="review-level">Level</label>
+            <select id="review-level" class="review-input">
+              <option value="all">All levels</option>
+              <option value="core">SL/HL</option>
+              <option value="ahl">HL only</option>
+            </select>
+          </div>
+          <div>
+            <label class="filter-label" for="review-status">Status</label>
+            <select id="review-status" class="review-input">
+              <option value="all">All answers</option>
+              <option value="unreviewed">Unreviewed</option>
+              <option value="reviewed">Reviewed</option>
+              <option value="changed">Changed</option>
+              <option value="flagged">Flagged</option>
+              <option value="risk">Risk queue</option>
+            </select>
+          </div>
+          <div>
+            <label class="filter-label" for="review-view">View</label>
+            <select id="review-view" class="review-input">
+              <option value="flat">All answers</option>
+              <option value="equation">By equation</option>
+              <option value="symbol">By symbol</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="review-panel-bottom">
+          <p class="review-result-line" id="review-result-line" aria-live="polite"></p>
+          <div class="review-toolbar-actions">
+            <button class="text-button" id="review-next" type="button">Next unreviewed <span aria-hidden="true">→</span></button>
+            <button class="button button-secondary" id="review-risk-button" type="button">Risk queue (0)</button>
+            <button class="button button-secondary" id="merge-changes" type="button">Merge review files</button>
+            <button class="button button-secondary" id="export-changes" type="button" disabled>Export review file</button>
+            <button class="button button-primary" id="export-curriculum" type="button">Download curriculum.js</button>
+            <button class="text-button review-reset" id="reset-review" type="button">Reset draft</button>
+          </div>
+        </div>
+      </section>
+
+      <p class="review-helper-note">
+        Tip: use <strong>By symbol</strong> to review every repeated symbol, including the ones outside the high-risk queue.
+      </p>
+      <p class="review-commit-note">
+        This page only edits a browser draft. To publish changes: download <code>curriculum.js</code>,
+        replace <code>data/curriculum.js</code>, run <code>node tests/run-tests.js</code>, then commit.
+      </p>
+
+      <div class="review-list" id="review-list"></div>
+      <p class="empty-results" id="review-empty" hidden>No answers match those filters.</p>
+    </main>
+
+    <footer class="footer">
+      <div>
+        <strong>Symbol Sense</strong>
+        <span>Independent study tool. Not affiliated with or endorsed by the IB.</span>
+      </div>
+      <div class="footer-links">
+        <a href="coverage.html">Coverage &amp; answers</a>
+        <a href="index.html">Practice</a>
+      </div>
+    </footer>
+  </div>
+
+  <div class="toast" id="review-toast" role="status" aria-live="polite" hidden></div>
+
+  <dialog class="review-dialog" id="merge-dialog" aria-labelledby="merge-title">
+    <div class="review-dialog-inner">
+      <header class="review-dialog-head">
+        <div>
+          <p class="section-kicker">Merge review exports</p>
+          <h2 id="merge-title">Import review files</h2>
+        </div>
+        <button class="review-dialog-close" id="merge-close" type="button" aria-label="Close merge dialog">×</button>
+      </header>
+
+      <div class="review-dialog-body">
+        <p class="merge-intro">
+          Select one or more <code>changes.json</code> files exported from this review workspace.
+          Different themes merge automatically; changes to the same answer are shown as conflicts.
+        </p>
+
+        <div class="merge-picker">
+          <button class="merge-drop" id="merge-browse" type="button">
+            <span class="merge-drop-title">Drop review files here</span>
+            <span class="merge-drop-sub">or click to choose one or more JSON files</span>
+          </button>
+          <input id="merge-file-input" type="file" accept="application/json,.json" multiple hidden>
+          <div class="merge-file-list" id="merge-file-list"></div>
+        </div>
+
+        <div class="merge-preview" id="merge-preview" hidden>
+          <div id="merge-summary" aria-live="polite"></div>
+          <div id="merge-warnings"></div>
+          <div id="merge-conflicts"></div>
+        </div>
+      </div>
+
+      <footer class="review-dialog-actions">
+        <button class="text-button" id="merge-reset" type="button">Choose different files</button>
+        <button class="button button-secondary" id="merge-cancel" type="button">Cancel</button>
+        <button class="button button-primary" id="merge-apply" type="button" disabled>Apply merge</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script src="data/curriculum.js"></script>
+  <script src="assets/js/render.js"></script>
+  <script src="assets/js/review.js"></script>
+</body>
+</html>

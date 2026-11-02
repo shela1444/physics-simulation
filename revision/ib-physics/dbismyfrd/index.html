@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="An open-ended practice quiz for the symbols in the IB DP Physics 2025 data booklet.">
+  <meta name="color-scheme" content="light">
+  <title>Symbol Sense — IB Physics data booklet quiz</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <div class="page-shell">
+    <header class="topbar">
+      <a class="brand" href="index.html" aria-label="Symbol Sense home">
+        <span class="brand-mark" aria-hidden="true">σ</span>
+        <span class="brand-copy">
+          <span class="brand-name">Symbol Sense</span>
+          <span class="brand-sub">IB Physics · 2025</span>
+        </span>
+      </a>
+      <nav class="topnav" aria-label="Site">
+        <a href="coverage.html">Coverage</a>
+        <a href="#how-it-works">How it works</a>
+      </nav>
+    </header>
+
+    <main id="main">
+      <section class="screen" id="screen-home">
+        <div class="hero">
+          <div class="hero-copy">
+            <p class="eyebrow">Data booklet v1.2 · first assessment 2025</p>
+            <h1>Know what every symbol means.</h1>
+            <p class="hero-lede">
+              A focused, open-ended quiz on the equations from themes A–E.
+              You type the meaning of each symbol; the app checks your answer and
+              shows the physics behind it.
+            </p>
+            <div class="hero-stats" aria-label="Quiz scope">
+              <span><strong id="stat-equations">—</strong> equations</span>
+              <span><strong id="stat-prompts">—</strong> symbol prompts</span>
+              <span><strong id="stat-topics">—</strong> topics</span>
+              <span id="last-result-chip" hidden><strong id="last-result-value">—</strong> last score</span>
+            </div>
+          </div>
+          <div class="hero-mark" aria-hidden="true">
+            <span class="hero-formula">E = hf</span>
+            <span class="hero-symbol">f</span>
+            <span class="hero-answer">frequency</span>
+          </div>
+        </div>
+
+        <section class="control-panel" aria-labelledby="practice-heading">
+          <div class="control-panel-head">
+            <div>
+              <p class="section-kicker">Practice set</p>
+              <h2 id="practice-heading">Choose your level and topic</h2>
+            </div>
+            <button class="button button-primary button-large" id="start-all" type="button">
+              <span id="start-all-label">Practice all topics</span>
+              <span class="button-arrow" aria-hidden="true">→</span>
+            </button>
+          </div>
+
+          <div class="filter-row">
+            <div class="filter-group">
+              <span class="filter-label" id="level-label">Level</span>
+              <div class="segmented" role="group" aria-labelledby="level-label" id="level-filter">
+                <button type="button" data-level="all" class="is-active" aria-pressed="true">All</button>
+                <button type="button" data-level="sl" aria-pressed="false">SL core</button>
+                <button type="button" data-level="hl" aria-pressed="false">HL all</button>
+                <button type="button" data-level="ahl" aria-pressed="false">HL only</button>
+              </div>
+            </div>
+            <div class="filter-group filter-group-theme">
+              <span class="filter-label" id="theme-label">Theme</span>
+              <div class="chip-row" role="group" aria-labelledby="theme-label" id="theme-filter">
+                <button type="button" data-theme="all" class="is-active" aria-pressed="true">All</button>
+                <button type="button" data-theme="A" aria-pressed="false">A · Motion</button>
+                <button type="button" data-theme="B" aria-pressed="false">B · Matter</button>
+                <button type="button" data-theme="C" aria-pressed="false">C · Waves</button>
+                <button type="button" data-theme="D" aria-pressed="false">D · Fields</button>
+                <button type="button" data-theme="E" aria-pressed="false">E · Quantum</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-summary" id="filter-summary" aria-live="polite"></div>
+          <div class="topic-grid" id="topic-grid"></div>
+          <p class="empty-note" id="topic-empty-note" hidden>
+            No equations are printed for this topic in the data booklet.
+          </p>
+        </section>
+
+        <section class="how-section" id="how-it-works" aria-labelledby="how-heading">
+          <p class="section-kicker">How it works</p>
+          <h2 id="how-heading">One symbol at a time</h2>
+          <div class="how-grid">
+            <article class="how-card">
+              <span class="how-number">01</span>
+              <h3>Read the equation</h3>
+              <p>The formula stays visible, so every answer is tied to its equation and context.</p>
+            </article>
+            <article class="how-card">
+              <span class="how-number">02</span>
+              <h3>Type the meaning</h3>
+              <p>Answer in your own words. The local matcher accepts aliases, small typos, and sensible wording.</p>
+            </article>
+            <article class="how-card">
+              <span class="how-number">03</span>
+              <h3>Review the gaps</h3>
+              <p>Immediate feedback, a final score, and a missed-symbol review make the next step obvious.</p>
+            </article>
+          </div>
+        </section>
+
+        <aside class="scope-note">
+          <h2>What is included</h2>
+          <p>
+            All 130 printed equation lines in themes A–E, with every physics quantity and physical
+            constant asked in context. C.4 and E.4 print no equations in this edition. The separate
+            constants table and mathematical reference pages are not quiz topics.
+          </p>
+        </aside>
+      </section>
+
+      <section class="screen" id="screen-quiz" hidden>
+        <div class="quiz-toolbar">
+          <button class="text-button" id="quit-quiz" type="button">
+            <span aria-hidden="true">←</span> Topics
+          </button>
+          <div class="quiz-progress-wrap">
+            <div class="progress-track" aria-hidden="true">
+              <span class="progress-fill" id="progress-fill"></span>
+            </div>
+            <span class="progress-label" id="progress-label">0 / 0</span>
+          </div>
+          <span class="quiz-live-score" id="quiz-live-score">0 correct</span>
+        </div>
+
+        <article class="quiz-card" id="quiz-card">
+          <div class="quiz-meta">
+            <span class="topic-badge" id="quiz-topic">A.1 · Kinematics</span>
+            <span class="level-badge" id="quiz-level">SL/HL</span>
+            <span class="equation-id" id="quiz-equation-id">A1-01</span>
+          </div>
+
+          <h1 class="quiz-equation-name" id="quiz-equation-name">Equation name</h1>
+          <div class="equation-display" id="quiz-equation" aria-label="Equation"></div>
+          <p class="equation-note" id="quiz-note"></p>
+
+          <div class="prompt-block">
+            <p class="prompt-kicker">What does this symbol represent?</p>
+            <div class="target-row">
+              <span class="target-symbol" id="target-symbol" aria-live="polite">v</span>
+              <span class="target-hint" id="target-hint">in this equation</span>
+            </div>
+
+            <form id="answer-form" novalidate>
+              <label class="sr-only" for="answer-input">Your answer</label>
+              <div class="answer-row">
+                <input
+                  id="answer-input"
+                  class="answer-input"
+                  name="answer"
+                  type="text"
+                  autocomplete="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                  placeholder="Type the quantity, e.g. final velocity"
+                >
+                <button class="button button-primary" id="submit-answer" type="submit">Check answer</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="feedback" id="feedback" hidden aria-live="polite"></div>
+
+          <div class="quiz-actions">
+            <button class="text-button" id="skip-question" type="button">Skip and show answer</button>
+            <button class="button button-primary" id="next-question" type="button" hidden>
+              Next symbol <span class="button-arrow" aria-hidden="true">→</span>
+            </button>
+          </div>
+        </article>
+
+        <p class="keyboard-note">Press <kbd>Enter</kbd> to check an answer or move to the next symbol.</p>
+      </section>
+
+      <section class="screen" id="screen-results" hidden>
+        <div class="results-hero">
+          <div class="score-ring" id="score-ring" style="--score: 0">
+            <span id="score-value">0%</span>
+            <small id="score-caption">correct</small>
+          </div>
+          <div class="results-copy">
+            <p class="eyebrow" id="results-eyebrow">Session complete</p>
+            <h1 id="results-title">Solid work.</h1>
+            <p id="results-lede">Review the symbols you missed, then try them again.</p>
+          </div>
+        </div>
+
+        <div class="result-stats" id="result-stats"></div>
+
+        <section class="results-section" aria-labelledby="breakdown-heading">
+          <div class="section-heading-row">
+            <div>
+              <p class="section-kicker">Breakdown</p>
+              <h2 id="breakdown-heading">By topic</h2>
+            </div>
+          </div>
+          <div class="breakdown-list" id="breakdown-list"></div>
+        </section>
+
+        <section class="results-section" aria-labelledby="missed-heading" id="missed-section">
+          <div class="section-heading-row">
+            <div>
+              <p class="section-kicker">Review</p>
+              <h2 id="missed-heading">Missed symbols</h2>
+            </div>
+            <span class="missed-count" id="missed-count">0</span>
+          </div>
+          <div class="missed-list" id="missed-list"></div>
+        </section>
+
+        <div class="results-actions">
+          <button class="button button-primary" id="retry-missed" type="button">Retry missed</button>
+          <button class="button button-secondary" id="restart-session" type="button">Practice again</button>
+          <button class="text-button" id="back-home" type="button">Back to topics</button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div>
+        <strong>Symbol Sense</strong>
+        <span>Independent study tool. Not affiliated with or endorsed by the IB.</span>
+      </div>
+      <div class="footer-links">
+        <a href="coverage.html">Coverage &amp; answers</a>
+        <a href="https://www.ibo.org/" rel="noopener noreferrer" target="_blank">IB Physics</a>
+      </div>
+    </footer>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script src="data/curriculum.js"></script>
+  <script src="assets/js/answer-matcher.js"></script>
+  <script src="assets/js/quiz-engine.js"></script>
+  <script src="assets/js/storage.js"></script>
+  <script src="assets/js/render.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
