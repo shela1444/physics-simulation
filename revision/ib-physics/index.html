@@ -322,11 +322,18 @@ function renderTopics(){
   }).join('');
   const mcN=mcQuestions().length;
   const allCount=levelQuestions().length;
+  const recallN=allCount-mcN;
   const allCountText=allCount<=5?`All ${allCount} questions`:`5 random from ${allCount} questions`;
   const allCard=allCount?`<button class="topic" onclick="startMixed('ALL')">
       <div class="code">MIX ALL</div>
       <div class="name">All topics</div>
       <div class="count">${allCountText}</div>
+    </button>`:'';
+  const easyCountText=recallN<=5?`All ${recallN} question${recallN===1?'':'s'}`:`5 random from ${recallN} questions`;
+  const easyCard=recallN?`<button class="topic" onclick="startEasyAll()">
+      <div class="code">EASY</div>
+      <div class="name">All topics — recall only</div>
+      <div class="count">${easyCountText}</div>
     </button>`:'';
   const sections=order.map(L=>{
     if(!themes[L]) return '';
@@ -343,7 +350,6 @@ function renderTopics(){
     const label=L==='T'?'Tools':`Theme ${L}`;
     return `<h2 class="theme">${label} — ${esc(THEMES[L])}</h2><div class="grid">${cards}</div>`;
   }).join('');
-  const recallN=allCount-mcN;
   document.getElementById('app').innerHTML=`
     <div class="hero">
       <h1>Things to be Remembered</h1>
@@ -355,7 +361,7 @@ function renderTopics(){
       <button class="btn ghost" onclick="changeLevel()">Change level</button>
     </div>
     <h2 class="theme">Mixed practice</h2>
-    <div class="grid">${mixCards}${allCard}</div>
+    <div class="grid">${mixCards}${allCard}${easyCard}</div>
     ${sections}`;
 }
 
@@ -388,6 +394,20 @@ function startMixed(scope){
   state.mode=scope==='ALL'?'all':'theme';
   state.selection=scope;
   state.label=scope==='ALL'?'all topics':`Theme ${scope} — ${THEMES[scope]}`;
+  state.round=shuffle(qs).slice(0,5);
+  state.index=0;
+  state.answers=[];
+  state.selected=new Set();
+  state.revealed=false;
+  state.options=makeOptions(currentQ());
+  state.view='quiz';
+  renderQuiz();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function startEasyAll(){
+  const qs=levelQuestions().filter(q=>!isMC(q));
+  if(!qs.length){toast('No recall questions in this selection.');return;}
+  state.mode='easy'; state.selection='EASY'; state.label='all topics — recall only';
   state.round=shuffle(qs).slice(0,5);
   state.index=0;
   state.answers=[];
@@ -568,20 +588,23 @@ function goTopics(){state.view='topics';state.mode='topic';state.selection=null;
 function completionScope(){
   if(state.mode==='topic') return `all the questions in topic ${state.label}`;
   if(state.mode==='theme') return `this mixed round from ${state.label}`;
+  if(state.mode==='easy') return 'this easy recall round from all topics';
   return 'this mixed round from all topics';
 }
 function retryScope(){
   if(state.mode==='topic') return `topic ${state.label}`;
   if(state.mode==='theme') return `this mixed round from ${state.label}`;
+  if(state.mode==='easy') return 'this easy recall round from all topics';
   return 'this mixed round from all topics';
 }
 function replaySelection(){
   if(state.mode==='topic') startTopic(state.selection);
+  else if(state.mode==='easy') startEasyAll();
   else startMixed(state.selection);
 }
 function renderComplete(){
   const ct=document.getElementById('changeTopicBtn'); if(ct) ct.classList.remove('hidden');
-  const redo=state.mode==='topic'?'Redo this topic':'New mixed round';
+  const redo=state.mode==='topic'?'Redo this topic':state.mode==='easy'?'New easy round':'New mixed round';
   document.getElementById('app').innerHTML=`
     <div class="card result">
       <h1>Yay you have finished ${esc(completionScope())}!! (Please screencap)</h1>
@@ -597,7 +620,7 @@ function renderRetry(){
   const correct=state.answers.filter(a=>a.result==='correct').length;
   const almost=state.answers.filter(a=>a.result==='almost').length;
   const learn=state.answers.filter(a=>a.result==='learn').length;
-  const retry=state.mode==='topic'?'Try again':'New mixed round';
+  const retry=state.mode==='topic'?'Try again':state.mode==='easy'?'New easy round':'New mixed round';
   document.getElementById('app').innerHTML=`
     <div class="card result">
       <h1>Not quite yet!</h1>
