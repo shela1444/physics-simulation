@@ -1,17 +1,19 @@
-/* Local Error Book. No account or server storage. */
+/* Shared Supabase-backed Error Book. */
 (function () {
   "use strict";
 
-  const STORAGE_KEY = "ib-error-book-v1";
   const YEARS = Array.from({ length: 12 }, (_, i) => String(2015 + i));
   const MONTHS = ["May", "November"];
   const TZS = ["—", "TZ1", "TZ2", "TZ3"];
   const LEVELS = ["SL", "HL"];
   const app = document.getElementById("app");
   const toastEl = document.getElementById("toast");
+  const whoEl = document.getElementById("accountName");
+  const outEl = document.getElementById("signOutBtn");
 
   let bank = null;
-  let book = loadBook();
+  let auth = null;
+  let records = [];
   const ui = {
     draft: { year: "2022", month: "May", tz: "TZ1", level: "SL" },
     first: null,
@@ -28,616 +30,250 @@
       "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
     }[c]));
   }
-
-  function uid(prefix) {
-    if (window.crypto && crypto.randomUUID) return prefix + "-" + crypto.randomUUID();
-    return prefix + "-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
-  }
-
-  function toast(message) {
+  function toast(m) {
     if (!toastEl) return;
-    toastEl.textContent = message;
-    toastEl.classList.add("show");
-    clearTimeout(toast._timer);
-    toast._timer = setTimeout(() => toastEl.classList.remove("show"), 2500);
+    toastEl.textContent = m; toastEl.classList.add("show");
+    clearTimeout(toast._t); toast._t = setTimeout(() => toastEl.classList.remove("show"), 2500);
   }
-
-  function loadBook() {
-    try {
-      const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-      if (value && Array.isArray(value.students) && Array.isArray(value.records)) return value;
-    } catch (_) {}
-    return { version: 1, students: [], activeStudentId: null, records: [] };
+  function setAccount(a) {
+    if (whoEl) {
+      whoEl.textContent = a && a.profile ? a.profile.display_name : "";
+      whoEl.classList.toggle("hidden", !a || !a.profile);
+    }
+    if (outEl) outEl.classList.toggle("hidden", !a || a.status !== "student");
   }
-
-  function saveBook() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(book));
-  }
-
-  function activeStudent() {
-    return book.students.find((s) => s.id === book.activeStudentId) || null;
-  }
-
-  function paperKey() {
-    return `${ui.draft.year}|${ui.draft.month}|${ui.draft.tz}|${ui.draft.level}`;
-  }
-
-  function paperLabel() {
-    return `${ui.draft.year} ${ui.draft.month} ${ui.draft.tz} ${ui.draft.level}`;
-  }
-
-  function studentRecords(studentId) {
-    return book.records
-      .filter((r) => r.studentId === studentId)
-      .sort((a, b) => String(b.lastLoggedAt || b.addedAt).localeCompare(String(a.lastLoggedAt || a.addedAt)));
-  }
-
-  function recordFor(studentId, mcId) {
-    return book.records.find((r) => r.studentId === studentId && r.mcId === mcId);
-  }
-
-  function bankQuestion(mcId) {
-    return bank && bank.questions ? bank.questions[mcId] : null;
-  }
-
-  function imageUrl(q) {
-    return "error-book/" + String(q.image || "").replace(/^\/+/, "");
-  }
-
-  function optionHtml(name, values, selected) {
+  function paperKey() { return `${ui.draft.year}|${ui.draft.month}|${ui.draft.tz}|${ui.draft.level}`; }
+  function paperLabel() { return `${ui.draft.year} ${ui.draft.month} ${ui.draft.tz} ${ui.draft.level}`; }
+  function bankQuestion(id) { return bank && bank.questions ? bank.questions[id] : null; }
+  function imageUrl(q) { return "error-book/" + String(q.image || "").replace(/^\/+/, ""); }
+  function optionHtml(values, selected) {
     return values.map((v) => `<option value="${esc(v)}" ${v === selected ? "selected" : ""}>${esc(v)}</option>`).join("");
   }
+  function qMeta(q) { return `<div class="qmeta"><span class="pill">${esc(q.id)}</span><span class="pill topic">${esc(q.topic)} — ${esc(q.topicTitle)}</span></div>`; }
 
-  function qMeta(q) {
-    return `<div class="qmeta"><span class="pill">${esc(q.id)}</span><span class="pill topic">${esc(q.topic)} — ${esc(q.topicTitle)}</span></div>`;
+  async function boot() {
+    if (!bank) { app.innerHTML = `<div class="card loading">Loading MC question bank…</div>`; return; }
+    if (!window.QuizAuth) { renderSetup("The account script did not load."); return; }
+    if (!QuizAuth.configured) { renderSetup(); return; }
+    const state = await QuizAuth.getState();
+    auth = state;
+    setAccount(state);
+    if (state.status === "signed_out") { renderLogin(); return; }
+    if (state.status === "unlinked") { renderUnlinked(state.message); return; }
+    if (state.status === "teacher") { renderTeacherNotice(); return; }
+    if (state.status !== "student") { renderError(state.message || "Could not load your account."); return; }
+    if (!await loadRecords()) return;
+    render();
+  }
+
+  async function loadRecords() {
+    const sb = QuizAuth.getClient();
+    const { data, error } = await sb.from("error_records")
+      .select("*")
+      .eq("roster_student_id", auth.roster.id)
+      .order("last_logged_at", { ascending: false });
+    if (error) { renderError(error.message); return false; }
+    records = data || [];
+    return true;
+  }
+
+  function renderSetup(message) {
+    setAccount(null);
+    app.innerHTML = `<div class="authcard"><h1>Supabase setup required</h1><p>${esc(message || "The account configuration is incomplete.")}</p><p>Run the schema and fill <code>supabase-config.js</code>.</p></div>`;
+  }
+  function renderLogin(message) {
+    setAccount(null);
+    app.innerHTML = `<div class="authcard"><h1>Error Book sign-in</h1><p>Use the username and password from your teacher. Teachers use their email address.</p>
+      <form class="auth-form" onsubmit="submitLogin(event)">
+        <label for="loginId">Username or email</label><input id="loginId" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+        <label for="loginPassword">Password</label><input id="loginPassword" type="password" autocomplete="current-password" required>
+        <button class="btn primary" type="submit" id="loginBtn">Sign in</button>
+      </form><div class="form-error" id="loginError">${esc(message || "")}</div></div>`;
+    const input = document.getElementById("loginId"); if (input) input.focus();
+  }
+  function renderUnlinked(message) {
+    setAccount(auth);
+    app.innerHTML = `<div class="authcard"><h1>Account not linked</h1><p>${esc(message || "Ask your teacher to link this account to your 6IB roster name.")}</p><button class="btn primary" onclick="signOutErrorBook()">Sign out</button></div>`;
+  }
+  function renderTeacherNotice() {
+    setAccount(auth);
+    app.innerHTML = `<div class="authcard"><h1>Teacher account</h1><p>Open the teacher dashboard to manage the 6IB roster and view all student records.</p><div class="actions-inline"><a class="btn primary" href="teacher.html">Teacher dashboard</a><button class="btn ghost" onclick="signOutErrorBook()">Sign out</button></div></div>`;
+  }
+  function renderError(message) {
+    setAccount(null);
+    app.innerHTML = `<div class="authcard"><h1>Could not load the Error Book</h1><p>${esc(message)}</p><button class="btn primary" onclick="bootErrorBook()">Try again</button></div>`;
+  }
+
+  async function submitLogin(event) {
+    event.preventDefault();
+    const id = document.getElementById("loginId");
+    const pw = document.getElementById("loginPassword");
+    const err = document.getElementById("loginError");
+    const btn = document.getElementById("loginBtn");
+    if (!id || !pw || !err || !btn) return;
+    err.textContent = ""; btn.disabled = true; btn.textContent = "Signing in…";
+    try { await QuizAuth.signIn(id.value, pw.value); await boot(); }
+    catch (e) { err.textContent = e.message || "Could not sign in."; }
+    finally { btn.disabled = false; btn.textContent = "Sign in"; }
   }
 
   function render() {
-    if (!bank) {
-      app.innerHTML = `<div class="card loading">Loading MC question bank…</div>`;
-      return;
-    }
-    if (ui.practice) {
-      renderPractice();
-      return;
-    }
-    const student = activeStudent();
-    if (!student) {
-      app.innerHTML = renderNoStudent();
-      return;
-    }
-    app.innerHTML = renderShell(student);
-  }
-
-  function renderNoStudent() {
-    return `<div class="card" style="max-width:620px;margin:30px auto">
-      <h1>Error Book</h1>
-      <p class="sub">Create a local student profile to start logging MC questions.</p>
-      <div class="row" style="margin-top:14px">
-        <div class="field" style="flex:1">
-          <label>Student name or ID</label>
-          <input id="newStudentName" placeholder="e.g. 6IB Alex">
-        </div>
-        <button class="btn primary" onclick="createStudent()">Create profile</button>
-        <label class="btn ghost" style="margin:0">Import class CSV<input type="file" accept=".csv,text/csv" multiple onchange="importCsv(event)" class="hidden"></label>
-        <label class="btn ghost" style="margin:0">Import JSON<input type="file" accept=".json,application/json" onchange="importBook(event)" class="hidden"></label>
-      </div>
-      <p class="sub" style="margin-top:14px">Stored only in this browser. No login required. CSV import creates all student profiles from a paper file.</p>
-    </div>`;
-  }
-
-  function renderShell(student) {
-    const records = studentRecords(student.id);
-    const unresolved = records.filter((r) => !r.mastered);
+    if (!auth || auth.status !== "student") { boot(); return; }
     const first = ui.first ? bankQuestion(ui.first.id) : null;
     const preview = ui.preview ? bankQuestion(ui.preview.id) : null;
-    return `
-      <div class="profilebar">
-        <div class="row">
-          <div class="field">
-            <label>Student</label>
-            <select onchange="switchStudent(this.value)">${book.students.map((s) =>
-              `<option value="${esc(s.id)}" ${s.id === student.id ? "selected" : ""}>${esc(s.name)}</option>`
-            ).join("")}</select>
-          </div>
-          <div class="field" style="flex:1">
-            <label>Add another student</label>
-            <input id="newStudentName" placeholder="Name or ID">
-          </div>
-          <button class="btn ghost" onclick="createStudent()">Add student</button>
-        </div>
-        <div class="actions-inline">
-          <button class="btn ghost" onclick="exportBook()">Export JSON</button>
-          <label class="btn ghost" style="margin:0">Import JSON<input type="file" accept=".json,application/json" onchange="importBook(event)" class="hidden"></label>
-          <label class="btn ghost" style="margin:0">Import class CSV<input type="file" accept=".csv,text/csv" multiple onchange="importCsv(event)" class="hidden"></label>
-        </div>
-      </div>
-
+    const unresolved = records.filter((r) => !r.mastered);
+    app.innerHTML = `
       <h1>Error Book</h1>
-      <p class="sub">${esc(student.name)} · ${records.length} logged question${records.length === 1 ? "" : "s"} · ${unresolved.length} still active</p>
-
+      <p class="sub">${esc(auth.profile.display_name)} · 6IB · ${records.length} logged · ${unresolved.length} active</p>
       ${ui.error ? `<div class="notice bad">${esc(ui.error)}</div>` : ""}
       ${ui.saved ? `<div class="notice ok">${esc(ui.saved)}</div>` : ""}
 
       <section class="card" style="margin-top:16px">
-        <div class="step">
-          <div class="stepnum">1</div>
-          <div class="stepbody">
-            <h2>Choose the paper</h2>
-            <p class="sub">Use the pulldowns, then confirm the first question identifies the correct paper.</p>
-            <div class="row">
-              <div class="field"><label>Year</label><select onchange="setDraft('year', this.value)">${optionHtml("year", YEARS, ui.draft.year)}</select></div>
-              <div class="field"><label>Month</label><select onchange="setDraft('month', this.value)">${optionHtml("month", MONTHS, ui.draft.month)}</select></div>
-              <div class="field"><label>Time zone</label><select onchange="setDraft('tz', this.value)">${optionHtml("tz", TZS, ui.draft.tz)}</select></div>
-              <div class="field"><label>Level</label><select onchange="setDraft('level', this.value)">${optionHtml("level", LEVELS, ui.draft.level)}</select></div>
-              <button class="btn primary" onclick="showFirstQuestion()">Show first question</button>
-            </div>
-            ${ui.first && first ? `
-              <div class="questionbox" style="margin-top:14px">
-                <h3>${ui.first.q === 1 ? "First question" : `First available question (Q${ui.first.q})`}</h3>
-                <p class="sub">${esc(paperLabel())} · ${esc(ui.first.source)}</p>
-                <img class="qimg" src="${esc(imageUrl(first))}" width="${first.width}" height="${first.height}" alt="${esc(first.id)}">
-                ${ui.confirmed ? `<div class="notice ok">Paper confirmed.</div>` : `<div class="actions">
-                  <button class="btn primary" onclick="confirmPaper()">This is the correct paper</button>
-                  <button class="btn ghost" onclick="changePaper()">Change paper</button>
-                </div>`}
-              </div>` : ""}
+        <div class="step"><div class="stepnum">1</div><div class="stepbody">
+          <h2>Choose the paper</h2><p class="sub">Confirm the first question identifies the correct paper.</p>
+          <div class="row">
+            <div class="field"><label>Year</label><select onchange="setDraft('year',this.value)">${optionHtml(YEARS, ui.draft.year)}</select></div>
+            <div class="field"><label>Month</label><select onchange="setDraft('month',this.value)">${optionHtml(MONTHS, ui.draft.month)}</select></div>
+            <div class="field"><label>Time zone</label><select onchange="setDraft('tz',this.value)">${optionHtml(TZS, ui.draft.tz)}</select></div>
+            <div class="field"><label>Level</label><select onchange="setDraft('level',this.value)">${optionHtml(LEVELS, ui.draft.level)}</select></div>
+            <button class="btn primary" onclick="showFirstQuestion()">Show first question</button>
           </div>
-        </div>
-
-        ${ui.confirmed ? `
-        <div class="step">
-          <div class="stepnum">2</div>
-          <div class="stepbody">
-            <h2>Enter one wrong question number</h2>
-            <p class="sub">The question will be shown immediately so you can confirm it.</p>
-            <div class="row">
-              <div class="field"><label>Question number</label><input id="wrongQ" type="number" min="1" max="40" value="${esc(ui.qInput)}" placeholder="e.g. 12"></div>
-              <button class="btn primary" onclick="checkQuestion()">Check question</button>
-            </div>
-            ${ui.preview && preview ? `
-              <div class="questionbox" style="margin-top:14px">
-                <h3>Is this the correct question?</h3>
-                <div class="qmeta">${qMeta(preview)}</div>
-                <p class="sub">${esc(ui.preview.source)}</p>
-                <img class="qimg" src="${esc(imageUrl(preview))}" width="${preview.width}" height="${preview.height}" alt="${esc(preview.id)}">
-                <div class="actions">
-                  <button class="btn primary" onclick="saveCurrentQuestion()">This is the correct question — save it</button>
-                  <button class="btn ghost" onclick="clearPreview()">Try another number</button>
-                </div>
-              </div>` : ""}
-          </div>
-        </div>` : ""}
+          ${ui.first && first ? `<div class="questionbox" style="margin-top:14px">
+            <h3>${ui.first.q === 1 ? "First question" : `First available question (Q${ui.first.q})`}</h3>
+            <p class="sub">${esc(paperLabel())} · ${esc(ui.first.source)}</p>
+            <img class="qimg" src="${esc(imageUrl(first))}" width="${first.width}" height="${first.height}" alt="${esc(first.id)}">
+            ${ui.confirmed ? `<div class="notice ok">Paper confirmed.</div>` : `<div class="actions"><button class="btn primary" onclick="confirmPaper()">This is the correct paper</button><button class="btn ghost" onclick="changePaper()">Change paper</button></div>`}
+          </div>` : ""}
+        </div></div>
+        ${ui.confirmed ? `<div class="step"><div class="stepnum">2</div><div class="stepbody">
+          <h2>Enter one wrong question number</h2>
+          <p class="sub">The question will be shown immediately for checking.</p>
+          <div class="row"><div class="field"><label>Question number</label><input id="wrongQ" type="number" min="1" max="40" value="${esc(ui.qInput)}" placeholder="e.g. 12"></div><button class="btn primary" onclick="checkQuestion()">Check question</button></div>
+          ${ui.preview && preview ? `<div class="questionbox" style="margin-top:14px">
+            <h3>Is this the correct question?</h3>${qMeta(preview)}<p class="sub">${esc(ui.preview.source)}</p>
+            <img class="qimg" src="${esc(imageUrl(preview))}" width="${preview.width}" height="${preview.height}" alt="${esc(preview.id)}">
+            <div class="actions"><button class="btn primary" onclick="saveCurrentQuestion()">This is the correct question — save it</button><button class="btn ghost" onclick="clearPreview()">Try another number</button></div>
+          </div>` : ""}
+        </div></div>` : ""}
       </section>
 
       <section class="card">
-        <div class="toolbar">
-          <div><h2>Error history</h2><p class="sub">Mastered questions stay here but are left out of practice.</p></div>
-          <button class="btn primary" onclick="startPractice()" ${unresolved.length ? "" : "disabled"}>Practise all active (${unresolved.length})</button>
-        </div>
-        ${records.length ? renderRecordTable(records) : `<div class="empty">No errors logged yet.</div>`}
+        <div class="toolbar"><div><h2>Error history</h2><p class="sub">Mastered questions stay in history but are left out of practice.</p></div>
+        <button class="btn primary" onclick="startPractice()" ${unresolved.length ? "" : "disabled"}>Practise all active (${unresolved.length})</button></div>
+        ${records.length ? renderTable() : `<div class="empty">No errors logged yet.</div>`}
       </section>`;
   }
 
-  function renderRecordTable(records) {
-    return `<div class="table-wrap"><table>
-      <thead><tr><th>Source</th><th>MC ID</th><th>Subtopic</th><th>Logged</th><th>Correct</th><th>Status</th><th>Actions</th></tr></thead>
-      <tbody>${records.map((r) => `<tr>
-        <td>${esc(r.source)}</td>
-        <td>${esc(r.mcId)}</td>
-        <td>${esc(r.topic)}</td>
-        <td>${r.timesLogged}×</td>
-        <td>${r.practiceCorrect || 0}/2</td>
-        <td><span class="status ${r.mastered ? "mastered" : ""}">${r.mastered ? "Mastered" : "Active"}</span></td>
-        <td><div class="actions-inline">
-          <button class="btn ghost" onclick="toggleMastered('${esc(r.id)}')">${r.mastered ? "Reactivate" : "Mark mastered"}</button>
-          <button class="btn danger" onclick="deleteRecord('${esc(r.id)}')">Delete</button>
-        </div></td>
-      </tr>`).join("")}</tbody>
-    </table></div>`;
+  function renderTable() {
+    return `<div class="table-wrap"><table><thead><tr><th>Source</th><th>MC ID</th><th>Subtopic</th><th>Logged</th><th>Correct</th><th>Status</th></tr></thead><tbody>
+      ${records.map((r) => `<tr><td>${esc(r.source)}</td><td>${esc(r.mc_id)}</td><td>${esc(r.topic)}</td><td>${r.times_logged}×</td><td>${r.practice_correct}/2</td><td><span class="status ${r.mastered ? "mastered" : ""}">${r.mastered ? "Mastered" : "Active"}</span></td></tr>`).join("")}
+    </tbody></table></div>`;
   }
 
-  function renderPractice() {
-    const p = ui.practice;
-    if (!p || !p.ids || !p.ids.length) {
-      app.innerHTML = `<div class="card"><h1>Practice</h1><p>No active errors to practise.</p><button class="btn primary" onclick="exitPractice()">Back to error book</button></div>`;
-      return;
-    }
-    if (p.complete) {
-      app.innerHTML = `<div class="practice card">
-        <h1>Practice complete</h1>
-        <p class="sub">${p.score} correct out of ${p.total}.</p>
-        <div class="score">${p.score} / ${p.total}</div>
-        <div class="actions-inline"><button class="btn primary" onclick="startPractice()">Practise active again</button><button class="btn ghost" onclick="exitPractice()">Back to error book</button></div>
-      </div>`;
-      return;
-    }
-    const mcId = p.ids[p.index];
-    const q = bankQuestion(mcId);
-    const student = activeStudent();
-    const rec = student && recordFor(student.id, mcId);
-    if (!q) { p.index++; if (p.index >= p.ids.length) p.complete = true; render(); return; }
-    const chosen = p.selected;
-    const revealed = p.revealed;
-    app.innerHTML = `<div class="practice card">
-      <div class="progress">Question ${p.index + 1} of ${p.ids.length}</div>
-      <div class="qmeta">${qMeta(q)}</div>
-      <img class="qimg" src="${esc(imageUrl(q))}" width="${q.width}" height="${q.height}" alt="${esc(q.id)}">
-      <div class="choices">${["A", "B", "C", "D"].map((letter) => {
-        let cls = "choice";
-        if (chosen === letter) cls += " selected";
-        if (revealed && q.answer === letter) cls += " correct";
-        if (revealed && chosen === letter && chosen !== q.answer) cls += " wrong";
-        return `<button class="${cls}" type="button" onclick="choosePractice('${letter}')" ${revealed ? "disabled" : ""}>${letter}</button>`;
-      }).join("")}</div>
-      ${revealed ? `<div class="feedback ${chosen === q.answer ? "correct" : "wrong"}">${chosen === q.answer ? "Correct" : "Wrong — the correct answer is " + esc(q.answer)}</div>` : ""}
-      <div class="actions-inline">
-        ${revealed ? `<button class="btn primary" onclick="nextPractice()">${p.index + 1 < p.ids.length ? "Next question" : "Finish practice"}</button>` : `<button class="btn primary" onclick="submitPractice()" ${chosen ? "" : "disabled"}>Submit</button>`}
-        <button class="btn ghost" onclick="exitPractice()">Exit</button>
-      </div>
-    </div>`;
-  }
-
-  function setDraft(key, value) {
-    ui.draft[key] = value;
-    ui.first = null; ui.confirmed = false; ui.preview = null; ui.error = ""; ui.saved = "";
-    render();
-  }
-
-  function createStudent() {
-    const input = document.getElementById("newStudentName");
-    const name = (input && input.value || "").trim();
-    if (!name) { toast("Enter a student name or ID."); return; }
-    if (book.students.some((s) => s.name.toLowerCase() === name.toLowerCase())) {
-      toast("That student already exists.");
-      return;
-    }
-    const s = { id: uid("student"), name, createdAt: new Date().toISOString() };
-    book.students.push(s);
-    book.activeStudentId = s.id;
-    saveBook(); ui.error = ""; render(); toast("Student profile created.");
-  }
-
-  function switchStudent(id) {
-    if (!book.students.some((s) => s.id === id)) return;
-    book.activeStudentId = id;
-    saveBook(); ui.preview = null; ui.first = null; ui.confirmed = false; ui.error = ""; ui.saved = "";
-    render();
-  }
-
+  function setDraft(k, v) { ui.draft[k] = v; ui.first = null; ui.confirmed = false; ui.preview = null; ui.error = ""; ui.saved = ""; render(); }
   function showFirstQuestion() {
     ui.error = ""; ui.saved = ""; ui.preview = null; ui.confirmed = false;
-    const key = paperKey();
-    const first = bank.first[key];
-    if (!first) {
-      ui.first = null;
-      ui.error = `No MC first question found for ${paperLabel()}. Check Month, TZ and Level.`;
-      render(); return;
-    }
-    ui.first = first;
-    render();
+    const f = bank.first[paperKey()];
+    if (!f) { ui.first = null; ui.error = `No MC first question found for ${paperLabel()}.`; render(); return; }
+    ui.first = f; render();
   }
-
-  function confirmPaper() {
-    if (!ui.first) return;
-    ui.confirmed = true;
-    ui.error = ""; ui.saved = "";
-    render();
-  }
-
-  function changePaper() {
-    ui.first = null; ui.confirmed = false; ui.preview = null; ui.error = ""; ui.saved = "";
-    render();
-  }
-
+  function confirmPaper() { if (!ui.first) return; ui.confirmed = true; ui.error = ""; ui.saved = ""; render(); }
+  function changePaper() { ui.first = null; ui.confirmed = false; ui.preview = null; ui.error = ""; ui.saved = ""; render(); }
   function checkQuestion() {
     ui.error = ""; ui.saved = "";
     const raw = (document.getElementById("wrongQ") || {}).value || "";
     const qnum = Number(raw);
-    if (!Number.isInteger(qnum) || qnum < 1 || qnum > 40) {
-      ui.error = "Enter a question number from 1 to 40.";
-      ui.preview = null; render(); return;
-    }
+    if (!Number.isInteger(qnum) || qnum < 1 || qnum > 40) { ui.error = "Enter a question number from 1 to 40."; ui.preview = null; render(); return; }
     ui.qInput = String(qnum);
     const key = `${paperKey()}|${qnum}`;
     const mcId = bank.lookup[key];
-    if (!mcId) {
-      ui.error = `No MC question ${qnum} found for ${paperLabel()}.`;
-      ui.preview = null; render(); return;
-    }
+    if (!mcId) { ui.error = `No MC question ${qnum} found for ${paperLabel()}.`; ui.preview = null; render(); return; }
     const q = bankQuestion(mcId);
     ui.preview = { id: mcId, q: qnum, source: (q.sources[0] || {}).label || `${paperLabel()} Q${qnum}` };
     render();
   }
+  function clearPreview() { ui.preview = null; ui.error = ""; ui.saved = ""; render(); }
 
-  function clearPreview() {
-    ui.preview = null; ui.error = ""; ui.saved = "";
-    render();
-  }
-
-  function saveCurrentQuestion() {
-    const student = activeStudent();
-    if (!student || !ui.preview) return;
-    const mcId = ui.preview.id;
-    const q = bankQuestion(mcId);
-    const now = new Date().toISOString();
-    let rec = recordFor(student.id, mcId);
-    if (rec) {
-      rec.timesLogged = (rec.timesLogged || 0) + 1;
-      rec.lastLoggedAt = now;
-      if (rec.mastered) { rec.mastered = false; rec.practiceCorrect = 0; }
-    } else {
-      rec = {
-        id: uid("record"),
-        studentId: student.id,
-        mcId,
-        year: ui.draft.year,
-        month: ui.draft.month,
-        tz: ui.draft.tz,
-        level: ui.draft.level,
-        qNumber: ui.preview.q,
-        source: ui.preview.source,
-        topic: q.topic,
-        topicTitle: q.topicTitle,
-        addedAt: now,
-        lastLoggedAt: now,
-        timesLogged: 1,
-        practiceCorrect: 0,
-        mastered: false
-      };
-      book.records.push(rec);
-    }
-    saveBook();
-    ui.saved = `Saved ${mcId} (${ui.preview.source}).`;
+  async function saveCurrentQuestion() {
+    if (!ui.preview || !auth.roster) return;
+    const sb = QuizAuth.getClient();
+    const q = bankQuestion(ui.preview.id);
+    ui.error = ""; ui.saved = "";
+    const { data, error } = await sb.rpc("log_error", {
+      p_roster_id: auth.roster.id,
+      p_mc_id: ui.preview.id,
+      p_year: ui.draft.year,
+      p_month: ui.draft.month,
+      p_tz: ui.draft.tz,
+      p_level: ui.draft.level,
+      p_q_number: ui.preview.q,
+      p_source: ui.preview.source,
+      p_topic: q.topic,
+      p_topic_title: q.topicTitle
+    });
+    if (error) { ui.error = error.message; render(); return; }
+    ui.saved = `Saved ${ui.preview.id} (${ui.preview.source}).`;
     ui.preview = null; ui.qInput = "";
-    render();
-    toast("Error logged.");
-  }
-
-  function toggleMastered(id) {
-    const rec = book.records.find((r) => r.id === id);
-    if (!rec) return;
-    rec.mastered = !rec.mastered;
-    if (rec.mastered) rec.practiceCorrect = 2;
-    else rec.practiceCorrect = 0;
-    saveBook(); render();
-  }
-
-  function deleteRecord(id) {
-    const rec = book.records.find((r) => r.id === id);
-    if (!rec) return;
-    if (!confirm(`Delete ${rec.mcId} from the error book?`)) return;
-    book.records = book.records.filter((r) => r.id !== id);
-    saveBook(); render(); toast("Record deleted.");
+    await loadRecords(); render(); toast("Error logged.");
   }
 
   function startPractice() {
-    const student = activeStudent();
-    if (!student) return;
-    const ids = studentRecords(student.id).filter((r) => !r.mastered).map((r) => r.mcId);
+    const ids = records.filter((r) => !r.mastered).map((r) => r.id);
     if (!ids.length) { toast("No active errors to practise."); return; }
     ui.practice = { ids: shuffle([...new Set(ids)]), index: 0, selected: null, revealed: false, score: 0, total: 0, complete: false };
-    render();
+    renderPractice();
   }
-
-  function choosePractice(letter) {
-    if (!ui.practice || ui.practice.revealed) return;
-    ui.practice.selected = letter;
-    render();
-  }
-
-  function submitPractice() {
+  function renderPractice() {
     const p = ui.practice;
-    if (!p || !p.selected) return;
-    const q = bankQuestion(p.ids[p.index]);
-    const student = activeStudent();
-    const rec = student && recordFor(student.id, p.ids[p.index]);
+    if (!p) { render(); return; }
+    if (p.complete) {
+      app.innerHTML = `<div class="practice card"><h1>Practice complete</h1><p class="sub">${p.score} correct out of ${p.total}.</p><div class="score">${p.score} / ${p.total}</div><div class="actions-inline"><button class="btn primary" onclick="startPractice()">Practise active again</button><button class="btn ghost" onclick="exitPractice()">Back to error book</button></div></div>`;
+      return;
+    }
+    const rec = records.find((r) => r.id === p.ids[p.index]);
+    const q = rec && bankQuestion(rec.mc_id);
+    if (!q) { p.index++; if (p.index >= p.ids.length) p.complete = true; else renderPractice(); return; }
+    const chosen = p.selected, revealed = p.revealed;
+    app.innerHTML = `<div class="practice card">
+      <div class="progress">Question ${p.index + 1} of ${p.ids.length}</div>${qMeta(q)}
+      <img class="qimg" src="${esc(imageUrl(q))}" width="${q.width}" height="${q.height}" alt="${esc(q.id)}">
+      <div class="choices">${["A","B","C","D"].map((l) => {
+        let cls = "choice"; if (chosen === l) cls += " selected";
+        if (revealed && q.answer === l) cls += " correct";
+        if (revealed && chosen === l && chosen !== q.answer) cls += " wrong";
+        return `<button class="${cls}" type="button" onclick="choosePractice('${l}')" ${revealed ? "disabled" : ""}>${l}</button>`;
+      }).join("")}</div>
+      ${revealed ? `<div class="feedback ${chosen === q.answer ? "correct" : "wrong"}">${chosen === q.answer ? "Correct" : "Wrong — the correct answer is " + esc(q.answer)}</div>` : ""}
+      <div class="actions-inline">${revealed ? `<button class="btn primary" onclick="nextPractice()">${p.index + 1 < p.ids.length ? "Next question" : "Finish practice"}</button>` : `<button class="btn primary" onclick="submitPractice()" ${chosen ? "" : "disabled"}>Submit</button>`}<button class="btn ghost" onclick="exitPractice()">Exit</button></div>
+    </div>`;
+  }
+  function choosePractice(l) { if (!ui.practice || ui.practice.revealed) return; ui.practice.selected = l; renderPractice(); }
+  async function submitPractice() {
+    const p = ui.practice; if (!p || !p.selected) return;
+    const rec = records.find((r) => r.id === p.ids[p.index]);
+    const q = rec && bankQuestion(rec.mc_id);
+    if (!rec || !q) return;
     const correct = p.selected === q.answer;
-    p.total += 1;
-    if (correct) {
-      p.score += 1;
-      if (rec) {
-        rec.practiceCorrect = (rec.practiceCorrect || 0) + 1;
-        if (rec.practiceCorrect >= 2) rec.mastered = true;
-      }
-    }
-    saveBook();
-    p.revealed = true;
-    render();
+    const sb = QuizAuth.getClient();
+    const { data, error } = await sb.rpc("record_practice", { p_record_id: rec.id, p_correct: correct });
+    if (error) { toast(error.message); return; }
+    const updated = Array.isArray(data) ? data[0] : data;
+    if (updated) Object.assign(rec, updated);
+    p.total += 1; if (correct) p.score += 1;
+    p.revealed = true; renderPractice();
   }
-
   function nextPractice() {
-    const p = ui.practice;
-    if (!p) return;
-    if (p.index + 1 >= p.ids.length) {
-      p.complete = true;
-    } else {
-      p.index += 1;
-      p.selected = null;
-      p.revealed = false;
-    }
-    render();
+    const p = ui.practice; if (!p) return;
+    if (p.index + 1 >= p.ids.length) p.complete = true;
+    else { p.index += 1; p.selected = null; p.revealed = false; }
+    renderPractice();
   }
+  function exitPractice() { ui.practice = null; render(); }
+  function shuffle(a) { const r = a.slice(); for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; } return r; }
 
-  function exitPractice() {
-    ui.practice = null;
-    render();
-  }
-
-  function parseCsv(text) {
-    const rows = [];
-    let row = [], field = "", quoted = false;
-    for (let i = 0; i < text.length; i++) {
-      const ch = text[i];
-      if (quoted) {
-        if (ch === '"') {
-          if (text[i + 1] === '"') { field += '"'; i++; }
-          else quoted = false;
-        } else field += ch;
-      } else if (ch === '"') quoted = true;
-      else if (ch === ",") { row.push(field); field = ""; }
-      else if (ch === "\n") { row.push(field); rows.push(row); row = []; field = ""; }
-      else if (ch !== "\r") field += ch;
-    }
-    if (field.length || row.length) { row.push(field); rows.push(row); }
-    return rows.filter((r) => r.some((x) => String(x).trim() !== ""));
-  }
-
-  function cleanName(value) {
-    return String(value || "").trim().replace(/\s+/g, " ");
-  }
-
-  function slugName(value) {
-    return cleanName(value).toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "student";
-  }
-
-  function findStudentByName(name) {
-    const key = cleanName(name).toLowerCase();
-    return book.students.find((s) => cleanName(s.name).toLowerCase() === key);
-  }
-
-  function newStudent(name) {
-    const base = "student-" + slugName(name);
-    let id = base, n = 2;
-    while (book.students.some((s) => s.id === id)) id = base + "-" + n++;
-    const s = { id, name: cleanName(name), createdAt: new Date().toISOString() };
-    book.students.push(s);
-    return s;
-  }
-
-  function parsePaperName(filename) {
-    const m = String(filename).match(/(20\d{2})\s*(may|nov|november)\s*(tz\d)\s*(sl|hl)/i);
-    if (!m) return null;
-    return { year: m[1], month: m[2].toLowerCase() === "may" ? "May" : "November", tz: m[3].toUpperCase(), level: m[4].toUpperCase() };
-  }
-
-  async function importCsv(event) {
-    const files = Array.from(event.target.files || []);
-    if (!files.length) return;
-    let addedStudents = 0, addedRecords = 0, mergedRecords = 0;
-    let correct = 0, blank = 0, wrong = 0, unresolved = 0, invalid = 0;
-    const fileReports = [];
-    const now = new Date().toISOString();
-    for (const file of files) {
-      const paper = parsePaperName(file.name);
-      if (!paper) { fileReports.push(`${file.name}: filename not recognised`); continue; }
-      const rows = parseCsv(await file.text());
-      if (rows.length < 2) { fileReports.push(`${file.name}: no student rows`); continue; }
-      const header = rows[0].map((h) => String(h).replace(/^\uFEFF/, "").trim());
-      const nameIndex = header.findIndex((h) => /^student\s*id$/i.test(h) || /^studentid$/i.test(h) || /^name$/i.test(h));
-      if (nameIndex < 0) { fileReports.push(`${file.name}: StudentID column missing`); continue; }
-      const responseCols = [];
-      header.forEach((h, i) => {
-        const m = h.match(/^Response(\d+)$/i);
-        if (m) responseCols.push({ q: Number(m[1]), index: i });
-      });
-      if (!responseCols.length) { fileReports.push(`${file.name}: no ResponseN columns`); continue; }
-      for (const row of rows.slice(1)) {
-        const name = cleanName(row[nameIndex]);
-        if (!name) continue;
-        let student = findStudentByName(name);
-        if (!student) { student = newStudent(name); addedStudents++; }
-        for (const col of responseCols) {
-          const key = `${paper.year}|${paper.month}|${paper.tz}|${paper.level}|${col.q}`;
-          const mcId = bank.lookup[key];
-          if (!mcId) { unresolved++; continue; }
-          const q = bankQuestion(mcId);
-          const raw = String(row[col.index] || "").trim().toUpperCase();
-          if (!raw) { blank++; wrong++; }
-          else if (!["A", "B", "C", "D"].includes(raw)) { invalid++; wrong++; }
-          else if (raw === q.answer) { correct++; continue; }
-          else wrong++;
-          const source = (q.sources || []).find((s) => s.key === key) || { label: `${paper.year} ${paper.month} ${paper.tz} ${paper.level} Q${col.q}` };
-          const existing = book.records.find((r) => r.studentId === student.id && r.mcId === mcId);
-          if (existing) {
-            existing.timesLogged = (existing.timesLogged || 0) + 1;
-            existing.lastLoggedAt = now;
-            if (existing.mastered) { existing.mastered = false; existing.practiceCorrect = 0; }
-            mergedRecords++;
-          } else {
-            book.records.push({
-              id: `record-${student.id}-${mcId}`,
-              studentId: student.id, mcId,
-              year: paper.year, month: paper.month, tz: paper.tz, level: paper.level,
-              qNumber: col.q, source: source.label,
-              topic: q.topic, topicTitle: q.topicTitle,
-              addedAt: now, lastLoggedAt: now,
-              timesLogged: 1, practiceCorrect: 0, mastered: false
-            });
-            addedRecords++;
-          }
-        }
-      }
-      fileReports.push(`${file.name}: ${rows.length - 1} students, ${responseCols.length} response columns`);
-    }
-    if (!activeStudent() && book.students.length) book.activeStudentId = book.students[0].id;
-    saveBook();
-    ui.practice = null;
-    ui.error = ""; ui.saved = `CSV import: ${addedStudents} new students, ${addedRecords} new records, ${mergedRecords} merged; ${correct} correct, ${blank} blank, ${wrong} wrong${unresolved ? `, ${unresolved} unresolved` : ""}${invalid ? `, ${invalid} invalid` : ""}.`;
-    render();
-    toast("Class CSV import complete.");
-    event.target.value = "";
-  }
-
-  function exportBook() {
-    const blob = new Blob([JSON.stringify(book, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "error-book-backup.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function importBook(event) {
-    const file = event.target.files && event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const incoming = JSON.parse(String(reader.result));
-        if (!incoming || incoming.version !== 1 || !Array.isArray(incoming.students) || !Array.isArray(incoming.records)) {
-          throw new Error("Not a valid error-book backup.");
-        }
-        let added = 0, merged = 0;
-        for (const s of incoming.students) {
-          if (!s || !s.id || !s.name) continue;
-          if (!book.students.some((x) => x.id === s.id)) { book.students.push(s); added++; }
-        }
-        for (const r of incoming.records) {
-          if (!r || !r.studentId || !r.mcId) continue;
-          const existing = book.records.find((x) => x.studentId === r.studentId && x.mcId === r.mcId);
-          if (!existing) { book.records.push(r); added++; }
-          else {
-            existing.practiceCorrect = Math.max(existing.practiceCorrect || 0, r.practiceCorrect || 0);
-            existing.mastered = !!(existing.mastered || r.mastered);
-            existing.timesLogged = Math.max(existing.timesLogged || 0, r.timesLogged || 0);
-            if (String(r.lastLoggedAt || "") > String(existing.lastLoggedAt || "")) existing.lastLoggedAt = r.lastLoggedAt;
-            merged++;
-          }
-        }
-        if (!activeStudent() && book.students.length) book.activeStudentId = book.students[0].id;
-        saveBook(); render();
-        toast(`Import complete: ${added} added, ${merged} merged.`);
-      } catch (error) {
-        toast(error.message || "Could not import that file.");
-      }
-    };
-    reader.readAsText(file);
-    event.target.value = "";
-  }
-
-  function shuffle(a) {
-    const r = a.slice();
-    for (let i = r.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [r[i], r[j]] = [r[j], r[i]];
-    }
-    return r;
-  }
-
-  window.createStudent = createStudent;
-  window.switchStudent = switchStudent;
+  window.submitLogin = submitLogin;
+  window.signOutErrorBook = async function () { try { await QuizAuth.signOut(); } catch (_) {} window.location.reload(); };
+  window.bootErrorBook = boot;
   window.setDraft = setDraft;
   window.showFirstQuestion = showFirstQuestion;
   window.confirmPaper = confirmPaper;
@@ -645,21 +281,14 @@
   window.checkQuestion = checkQuestion;
   window.clearPreview = clearPreview;
   window.saveCurrentQuestion = saveCurrentQuestion;
-  window.toggleMastered = toggleMastered;
-  window.deleteRecord = deleteRecord;
   window.startPractice = startPractice;
   window.choosePractice = choosePractice;
   window.submitPractice = submitPractice;
   window.nextPractice = nextPractice;
   window.exitPractice = exitPractice;
-  window.exportBook = exportBook;
-  window.importBook = importBook;
-  window.importCsv = importCsv;
 
   fetch("error-book/index.json")
     .then((r) => { if (!r.ok) throw new Error("Could not load error-book/index.json"); return r.json(); })
-    .then((data) => { bank = data; render(); })
-    .catch((error) => {
-      app.innerHTML = `<div class="card"><h1>Could not load the MC bank</h1><p>${esc(error.message)}</p></div>`;
-    });
+    .then((data) => { bank = data; boot(); })
+    .catch((e) => { app.innerHTML = `<div class="card"><h1>Could not load the MC bank</h1><p>${esc(e.message)}</p></div>`; });
 })();

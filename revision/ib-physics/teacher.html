@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="data:,">
+<title>Teacher dashboard — Things to be Remembered</title>
+<style>
+:root{
+  --bg:#f4f6fb; --card:#fff; --ink:#172033; --muted:#667085; --line:#dfe4ee;
+  --brand:#3b5bdb; --brand2:#2743a6; --ok:#0f7b4f; --okbg:#e7f6ee;
+  --warn:#9a6700; --warnbg:#fff4d6; --bad:#b42318; --badbg:#fde8e7;
+  --shadow:0 10px 30px rgba(21,32,64,.08);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Segoe UI",system-ui,-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif}
+button{font:inherit;cursor:pointer}
+a{color:var(--brand);text-decoration:none}
+.topbar{position:sticky;top:0;z-index:10;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.topbar-in{max-width:1180px;margin:0 auto;padding:13px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.brand{display:flex;flex-direction:column;gap:1px}
+.brand b{font-size:16px}.brand span{font-size:11.5px;color:var(--muted)}
+.topbar-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.who{font-size:12px;font-weight:800;color:var(--muted);max-width:210px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+main{max-width:1180px;margin:0 auto;padding:24px 20px 60px}
+.btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);background:#fff;color:var(--ink);padding:9px 13px;border-radius:10px;font-weight:700;font-size:13px;transition:.15s;white-space:nowrap}
+.btn:hover{border-color:#b9c3da;transform:translateY(-1px)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.primary:hover{background:var(--brand2);border-color:var(--brand2)}
+.btn.ghost{background:#f8faff}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.hero h1{font-size:30px;margin:0 0 5px;letter-spacing:-.5px}
+.hero p{margin:0;color:var(--muted);font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px}
+.authcard{max-width:560px;margin:28px auto;padding:26px 24px}
+.authcard h1{font-size:25px;margin:0 0 8px;letter-spacing:-.3px}
+.authcard p{color:var(--muted);margin:0 0 18px}
+.auth-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}
+.auth-note{font-size:12px;color:var(--muted);line-height:1.5;margin-top:16px}
+.auth-error{color:var(--bad);font-size:13px;font-weight:700;margin-top:12px}
+.dashboard-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:4px 0 18px}
+.dashboard-head h1{font-size:30px;margin:0 0 5px;letter-spacing:-.5px}
+.dashboard-head p{margin:0;color:var(--muted);font-size:14px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin:18px 0}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 4px 14px rgba(21,32,64,.04)}
+.stat b{display:block;font-size:24px;letter-spacing:-.4px;margin-bottom:2px}
+.stat span{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:800}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px;margin-bottom:16px}
+.panel h2{font-size:15px;margin:0 0 4px}
+.panel .sub{font-size:12px;color:var(--muted);margin:0 0 14px}
+.class-form{display:flex;gap:9px;flex-wrap:wrap}
+.input{flex:1 1 220px;min-width:0;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;background:#fff;color:var(--ink)}
+.input:focus{outline:3px solid rgba(59,91,219,.15);border-color:var(--brand)}
+.form-error{color:var(--bad);font-size:12px;font-weight:700;min-height:18px;margin-top:8px}
+.auth-form{display:flex;flex-direction:column;gap:9px}
+.auth-form label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:800}
+.auth-form .input{width:100%;flex:none}
+.class-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+.class-card{background:#f9faff;border:1px solid var(--line);border-radius:12px;padding:13px}
+.class-card .name{font-weight:800;font-size:14px;margin-bottom:6px;line-height:1.3}
+.class-card .code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:19px;font-weight:800;letter-spacing:2px;color:var(--brand);margin-bottom:8px}
+.class-card .code-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:800;margin-bottom:2px}
+.class-card .btn{padding:6px 9px;font-size:11px}
+.filters{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;align-items:end}
+.field label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:800;margin-bottom:4px}
+.field .input{width:100%;flex:none;padding:8px 9px;font-size:13px}
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px;margin-top:14px}
+table{width:100%;border-collapse:collapse;min-width:760px;font-size:13px}
+th,td{text-align:left;padding:10px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:#f8faff;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:1px;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+.score{font-weight:800;color:var(--ink)}
+.score.good{color:var(--ok)}
+.score.mid{color:var(--warn)}
+.score.low{color:var(--bad)}
+.empty{padding:28px 12px;text-align:center;color:var(--muted);font-size:13px}
+.errorbox{background:var(--badbg);border:1px solid #f4c9c5;color:var(--bad);border-radius:12px;padding:12px 14px;font-size:13px;font-weight:700;margin-bottom:14px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:#172033;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;opacity:0;pointer-events:none;transition:.2s;z-index:20}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.hidden{display:none!important}
+@media(max-width:900px){.stats{grid-template-columns:repeat(2,1fr)}.filters{grid-template-columns:repeat(3,1fr)}.class-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){main{padding:18px 14px 44px}.topbar-in{padding:10px 14px;gap:8px}.who{display:none}.stats{grid-template-columns:repeat(2,1fr)}.filters{grid-template-columns:repeat(2,1fr)}.class-grid{grid-template-columns:1fr}.dashboard-head h1{font-size:25px}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand">
+      <b>Things to be Remembered</b>
+      <span>Teacher dashboard</span>
+    </div>
+    <div class="topbar-actions">
+      <span class="who" id="accountName"></span>
+      <a class="btn ghost" href="index.html">Student quiz</a>
+      <button class="btn ghost hidden" id="signOutBtn" onclick="signOutTeacher()">Sign out</button>
+    </div>
+  </div>
+</header>
+<main id="app"></main>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="supabase-config.js"></script>
+<script src="auth.js"></script>
+<script src="teacher.js"></script>
+</body>
+</html>
