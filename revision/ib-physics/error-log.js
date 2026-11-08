@@ -80,6 +80,10 @@
     return bank && bank.questions ? bank.questions[mcId] : null;
   }
 
+  function imageUrl(q) {
+    return "error-book/" + String(q.image || "").replace(/^\/+/, "");
+  }
+
   function optionHtml(name, values, selected) {
     return values.map((v) => `<option value="${esc(v)}" ${v === selected ? "selected" : ""}>${esc(v)}</option>`).join("");
   }
@@ -169,7 +173,7 @@
               <div class="questionbox" style="margin-top:14px">
                 <h3>${ui.first.q === 1 ? "First question" : `First available question (Q${ui.first.q})`}</h3>
                 <p class="sub">${esc(paperLabel())} · ${esc(ui.first.source)}</p>
-                <img class="qimg" src="${esc(first.image)}" width="${first.width}" height="${first.height}" alt="${esc(first.id)}">
+                <img class="qimg" src="${esc(imageUrl(first))}" width="${first.width}" height="${first.height}" alt="${esc(first.id)}">
                 ${ui.confirmed ? `<div class="notice ok">Paper confirmed.</div>` : `<div class="actions">
                   <button class="btn primary" onclick="confirmPaper()">This is the correct paper</button>
                   <button class="btn ghost" onclick="changePaper()">Change paper</button>
@@ -193,7 +197,7 @@
                 <h3>Is this the correct question?</h3>
                 <div class="qmeta">${qMeta(preview)}</div>
                 <p class="sub">${esc(ui.preview.source)}</p>
-                <img class="qimg" src="${esc(preview.image)}" width="${preview.width}" height="${preview.height}" alt="${esc(preview.id)}">
+                <img class="qimg" src="${esc(imageUrl(preview))}" width="${preview.width}" height="${preview.height}" alt="${esc(preview.id)}">
                 <div class="actions">
                   <button class="btn primary" onclick="saveCurrentQuestion()">This is the correct question — save it</button>
                   <button class="btn ghost" onclick="clearPreview()">Try another number</button>
@@ -255,7 +259,7 @@
     app.innerHTML = `<div class="practice card">
       <div class="progress">Question ${p.index + 1} of ${p.ids.length}</div>
       <div class="qmeta">${qMeta(q)}</div>
-      <img class="qimg" src="${esc(q.image)}" width="${q.width}" height="${q.height}" alt="${esc(q.id)}">
+      <img class="qimg" src="${esc(imageUrl(q))}" width="${q.width}" height="${q.height}" alt="${esc(q.id)}">
       <div class="choices">${["A", "B", "C", "D"].map((letter) => {
         let cls = "choice";
         if (chosen === letter) cls += " selected";
