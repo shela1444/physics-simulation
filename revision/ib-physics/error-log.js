@@ -120,6 +120,7 @@
         </div>
         <button class="btn primary" onclick="createStudent()">Create profile</button>
         <label class="btn ghost" style="margin:0">Import class CSV<input type="file" accept=".csv,text/csv" multiple onchange="importCsv(event)" class="hidden"></label>
+        <label class="btn ghost" style="margin:0">Import JSON<input type="file" accept=".json,application/json" onchange="importBook(event)" class="hidden"></label>
       </div>
       <p class="sub" style="margin-top:14px">Stored only in this browser. No login required. CSV import creates all student profiles from a paper file.</p>
     </div>`;
