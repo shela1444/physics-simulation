@@ -119,8 +119,9 @@
           <input id="newStudentName" placeholder="e.g. 6IB Alex">
         </div>
         <button class="btn primary" onclick="createStudent()">Create profile</button>
+        <label class="btn ghost" style="margin:0">Import class CSV<input type="file" accept=".csv,text/csv" multiple onchange="importCsv(event)" class="hidden"></label>
       </div>
-      <p class="sub" style="margin-top:14px">Stored only in this browser. No login required.</p>
+      <p class="sub" style="margin-top:14px">Stored only in this browser. No login required. CSV import creates all student profiles from a paper file.</p>
     </div>`;
   }
 
@@ -147,6 +148,7 @@
         <div class="actions-inline">
           <button class="btn ghost" onclick="exportBook()">Export JSON</button>
           <label class="btn ghost" style="margin:0">Import JSON<input type="file" accept=".json,application/json" onchange="importBook(event)" class="hidden"></label>
+          <label class="btn ghost" style="margin:0">Import class CSV<input type="file" accept=".csv,text/csv" multiple onchange="importCsv(event)" class="hidden"></label>
         </div>
       </div>
 
@@ -461,6 +463,121 @@
     render();
   }
 
+  function parseCsv(text) {
+    const rows = [];
+    let row = [], field = "", quoted = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (quoted) {
+        if (ch === '"') {
+          if (text[i + 1] === '"') { field += '"'; i++; }
+          else quoted = false;
+        } else field += ch;
+      } else if (ch === '"') quoted = true;
+      else if (ch === ",") { row.push(field); field = ""; }
+      else if (ch === "\n") { row.push(field); rows.push(row); row = []; field = ""; }
+      else if (ch !== "\r") field += ch;
+    }
+    if (field.length || row.length) { row.push(field); rows.push(row); }
+    return rows.filter((r) => r.some((x) => String(x).trim() !== ""));
+  }
+
+  function cleanName(value) {
+    return String(value || "").trim().replace(/\s+/g, " ");
+  }
+
+  function slugName(value) {
+    return cleanName(value).toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "student";
+  }
+
+  function findStudentByName(name) {
+    const key = cleanName(name).toLowerCase();
+    return book.students.find((s) => cleanName(s.name).toLowerCase() === key);
+  }
+
+  function newStudent(name) {
+    const base = "student-" + slugName(name);
+    let id = base, n = 2;
+    while (book.students.some((s) => s.id === id)) id = base + "-" + n++;
+    const s = { id, name: cleanName(name), createdAt: new Date().toISOString() };
+    book.students.push(s);
+    return s;
+  }
+
+  function parsePaperName(filename) {
+    const m = String(filename).match(/(20\d{2})\s*(may|nov|november)\s*(tz\d)\s*(sl|hl)/i);
+    if (!m) return null;
+    return { year: m[1], month: m[2].toLowerCase() === "may" ? "May" : "November", tz: m[3].toUpperCase(), level: m[4].toUpperCase() };
+  }
+
+  async function importCsv(event) {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+    let addedStudents = 0, addedRecords = 0, mergedRecords = 0;
+    let correct = 0, blank = 0, wrong = 0, unresolved = 0, invalid = 0;
+    const fileReports = [];
+    const now = new Date().toISOString();
+    for (const file of files) {
+      const paper = parsePaperName(file.name);
+      if (!paper) { fileReports.push(`${file.name}: filename not recognised`); continue; }
+      const rows = parseCsv(await file.text());
+      if (rows.length < 2) { fileReports.push(`${file.name}: no student rows`); continue; }
+      const header = rows[0].map((h) => String(h).replace(/^\uFEFF/, "").trim());
+      const nameIndex = header.findIndex((h) => /^student\s*id$/i.test(h) || /^studentid$/i.test(h) || /^name$/i.test(h));
+      if (nameIndex < 0) { fileReports.push(`${file.name}: StudentID column missing`); continue; }
+      const responseCols = [];
+      header.forEach((h, i) => {
+        const m = h.match(/^Response(\d+)$/i);
+        if (m) responseCols.push({ q: Number(m[1]), index: i });
+      });
+      if (!responseCols.length) { fileReports.push(`${file.name}: no ResponseN columns`); continue; }
+      for (const row of rows.slice(1)) {
+        const name = cleanName(row[nameIndex]);
+        if (!name) continue;
+        let student = findStudentByName(name);
+        if (!student) { student = newStudent(name); addedStudents++; }
+        for (const col of responseCols) {
+          const key = `${paper.year}|${paper.month}|${paper.tz}|${paper.level}|${col.q}`;
+          const mcId = bank.lookup[key];
+          if (!mcId) { unresolved++; continue; }
+          const q = bankQuestion(mcId);
+          const raw = String(row[col.index] || "").trim().toUpperCase();
+          if (!raw) { blank++; wrong++; }
+          else if (!["A", "B", "C", "D"].includes(raw)) { invalid++; wrong++; }
+          else if (raw === q.answer) { correct++; continue; }
+          else wrong++;
+          const source = (q.sources || []).find((s) => s.key === key) || { label: `${paper.year} ${paper.month} ${paper.tz} ${paper.level} Q${col.q}` };
+          const existing = book.records.find((r) => r.studentId === student.id && r.mcId === mcId);
+          if (existing) {
+            existing.timesLogged = (existing.timesLogged || 0) + 1;
+            existing.lastLoggedAt = now;
+            if (existing.mastered) { existing.mastered = false; existing.practiceCorrect = 0; }
+            mergedRecords++;
+          } else {
+            book.records.push({
+              id: `record-${student.id}-${mcId}`,
+              studentId: student.id, mcId,
+              year: paper.year, month: paper.month, tz: paper.tz, level: paper.level,
+              qNumber: col.q, source: source.label,
+              topic: q.topic, topicTitle: q.topicTitle,
+              addedAt: now, lastLoggedAt: now,
+              timesLogged: 1, practiceCorrect: 0, mastered: false
+            });
+            addedRecords++;
+          }
+        }
+      }
+      fileReports.push(`${file.name}: ${rows.length - 1} students, ${responseCols.length} response columns`);
+    }
+    if (!activeStudent() && book.students.length) book.activeStudentId = book.students[0].id;
+    saveBook();
+    ui.practice = null;
+    ui.error = ""; ui.saved = `CSV import: ${addedStudents} new students, ${addedRecords} new records, ${mergedRecords} merged; ${correct} correct, ${blank} blank, ${wrong} wrong${unresolved ? `, ${unresolved} unresolved` : ""}${invalid ? `, ${invalid} invalid` : ""}.`;
+    render();
+    toast("Class CSV import complete.");
+    event.target.value = "";
+  }
+
   function exportBook() {
     const blob = new Blob([JSON.stringify(book, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -536,6 +653,7 @@
   window.exitPractice = exitPractice;
   window.exportBook = exportBook;
   window.importBook = importBook;
+  window.importCsv = importCsv;
 
   fetch("error-book/index.json")
     .then((r) => { if (!r.ok) throw new Error("Could not load error-book/index.json"); return r.json(); })
