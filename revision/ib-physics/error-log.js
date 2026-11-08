@@ -45,7 +45,14 @@
   function paperKey() { return `${ui.draft.year}|${ui.draft.month}|${ui.draft.tz}|${ui.draft.level}`; }
   function paperLabel() { return `${ui.draft.year} ${ui.draft.month} ${ui.draft.tz} ${ui.draft.level}`; }
   function bankQuestion(id) { return bank && bank.questions ? bank.questions[id] : null; }
-  function imageUrl(q) { return "error-book/" + String(q.image || "").replace(/^\/+/, ""); }
+  function imageUrl(part) {
+    const path = typeof part === "string" ? part : (part.path || part.image || "");
+    return "error-book/" + String(path).replace(/^\/+/, "");
+  }
+  function imagesHtml(q, cls) {
+    const parts = (q.images && q.images.length) ? q.images : [{ path: q.image, width: q.width, height: q.height }];
+    return parts.map((p) => `<img class="${cls || "qimg"}" src="${esc(imageUrl(p))}" width="${p.width || q.width}" height="${p.height || q.height}" alt="${esc(q.id)}">`).join("");
+  }
   function optionHtml(values, selected) {
     return values.map((v) => `<option value="${esc(v)}" ${v === selected ? "selected" : ""}>${esc(v)}</option>`).join("");
   }
@@ -141,7 +148,7 @@
           ${ui.first && first ? `<div class="questionbox" style="margin-top:14px">
             <h3>${ui.first.q === 1 ? "First question" : `First available question (Q${ui.first.q})`}</h3>
             <p class="sub">${esc(paperLabel())} · ${esc(ui.first.source)}</p>
-            <img class="qimg" src="${esc(imageUrl(first))}" width="${first.width}" height="${first.height}" alt="${esc(first.id)}">
+            ${imagesHtml(first)}
             ${ui.confirmed ? `<div class="notice ok">Paper confirmed.</div>` : `<div class="actions"><button class="btn primary" onclick="confirmPaper()">This is the correct paper</button><button class="btn ghost" onclick="changePaper()">Change paper</button></div>`}
           </div>` : ""}
         </div></div>
@@ -151,7 +158,7 @@
           <div class="row"><div class="field"><label>Question number</label><input id="wrongQ" type="number" min="1" max="40" value="${esc(ui.qInput)}" placeholder="e.g. 12"></div><button class="btn primary" onclick="checkQuestion()">Check question</button></div>
           ${ui.preview && preview ? `<div class="questionbox" style="margin-top:14px">
             <h3>Is this the correct question?</h3>${qMeta(preview)}<p class="sub">${esc(ui.preview.source)}</p>
-            <img class="qimg" src="${esc(imageUrl(preview))}" width="${preview.width}" height="${preview.height}" alt="${esc(preview.id)}">
+            ${imagesHtml(preview)}
             <div class="actions"><button class="btn primary" onclick="saveCurrentQuestion()">This is the correct question — save it</button><button class="btn ghost" onclick="clearPreview()">Try another number</button></div>
           </div>` : ""}
         </div></div>` : ""}
@@ -236,7 +243,7 @@
     const chosen = p.selected, revealed = p.revealed;
     app.innerHTML = `<div class="practice card">
       <div class="progress">Question ${p.index + 1} of ${p.ids.length}</div>${qMeta(q)}
-      <img class="qimg" src="${esc(imageUrl(q))}" width="${q.width}" height="${q.height}" alt="${esc(q.id)}">
+      ${imagesHtml(q)}
       <div class="choices">${["A","B","C","D"].map((l) => {
         let cls = "choice"; if (chosen === l) cls += " selected";
         if (revealed && q.answer === l) cls += " correct";
