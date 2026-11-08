@@ -20,6 +20,7 @@ button{font:inherit;cursor:pointer}
 .topbar-in{max-width:1050px;margin:0 auto;padding:13px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px}
 .brand{display:flex;flex-direction:column;gap:1px}
 .brand b{font-size:16px}.brand span{font-size:11.5px;color:var(--muted)}
+.topbar-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 main{max-width:1050px;margin:0 auto;padding:24px 20px 60px}
 .btn{border:1px solid var(--line);background:#fff;color:var(--ink);padding:9px 13px;border-radius:10px;font-weight:700;font-size:13px;transition:.15s;white-space:nowrap}
 .btn:hover{border-color:#b9c3da;transform:translateY(-1px)}
@@ -225,7 +226,10 @@ body{-webkit-text-size-adjust:100%}
       <b>Things to be Remembered</b>
       <span>IB Physics Paper 1 + Paper 2 · topic quiz</span>
     </div>
-    <button class="btn ghost hidden" id="changeTopicBtn" onclick="goTopics()">Change topic</button>
+    <div class="topbar-actions">
+      <a class="btn ghost" href="error-log.html">Error book</a>
+      <button class="btn ghost hidden" id="changeTopicBtn" onclick="goTopics()">Change topic</button>
+    </div>
   </div>
 </header>
 <main id="app"></main>
