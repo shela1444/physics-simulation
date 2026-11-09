@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Pseudo Force in an Accelerating Frame — watch a hanging bob lean as a car accelerates.">
-  <title>Pseudo Force in an Accelerating Frame — Physics Simulator</title>
+  <meta name="description" content="Bob hanging in a car — watch a hanging bob lean as the car accelerates.">
+  <title>Bob hanging in a car — Physics Simulator</title>
 
   <link rel="stylesheet" href="css/variables.css">
   <link rel="stylesheet" href="css/layout.css">
@@ -14,8 +14,7 @@
   <div id="app">
     <header class="header" role="banner">
       <div class="header__titles">
-        <h1 class="header__title">Pseudo Force in an Accelerating Frame</h1>
-        <p class="header__subtitle">A bob hangs from the car’s roof. In the car’s accelerating frame, a pseudo force makes it lean.</p>
+        <h1 class="header__title">Bob hanging in a car</h1>
       </div>
       <div class="header__actions">
         <span class="header__hint"><span class="kbd">Space</span> pause · <span class="kbd">R</span> reset</span>
@@ -69,6 +68,10 @@
                 <div class="hud__item">
                   <span class="hud__label">Pseudo force</span>
                   <span class="hud__value hud__value--pseudo" id="hud-pseudo">0.00 N</span>
+                </div>
+                <div class="hud__item">
+                  <span class="hud__label">Bob mass</span>
+                  <span class="hud__value hud__value--mass" id="hud-mass">0.50 kg</span>
                 </div>
               </div>
             </div>

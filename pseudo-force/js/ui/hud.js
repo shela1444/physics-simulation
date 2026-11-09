@@ -47,6 +47,7 @@ class HUD {
     this.velocityEl = this._get('hud-velocity');
     this.angleEl = this._get('hud-angle');
     this.pseudoEl = this._get('hud-pseudo');
+    this.massEl = this._get('hud-mass');
   }
 
   /**
@@ -82,6 +83,7 @@ class HUD {
     const velocity = finite(state.carVelocity);
     const angleDeg = finite(state.angleDeg);
     const pseudoForce = finite(state.pseudoForce);
+    const mass = finite(state.mass);
 
     const decelerating =
       Math.abs(acceleration) >= 0.05 && velocity * acceleration < 0;
@@ -101,6 +103,7 @@ class HUD {
     this._set(this.angleEl, `${absAngle.toFixed(1)}° ${direction}`);
 
     this._set(this.pseudoEl, `${pseudoForce.toFixed(2)} N`);
+    this._set(this.massEl, `${mass.toFixed(2)} kg`);
 
     if (this.accelerationEl && this.accelerationEl.classList) {
       this.accelerationEl.classList.toggle('is-decel', decelerating);

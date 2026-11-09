@@ -281,6 +281,10 @@
   color: var(--warning);
 }
 
+.hud__value--mass {
+  color: var(--bob-color);
+}
+
 /* Status line */
 .status-line {
   flex: 1;

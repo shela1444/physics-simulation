@@ -758,7 +758,7 @@ class CarPendulumScene {
   }
 
   _drawArrows(ctx, state) {
-    const anchorX = this.width * 0.78;
+    const anchorX = this.width * 0.84;
     const maxLength = this._maxArrowLength(anchorX);
     const fontSize = clamp(this.width * 0.0135, 10, 13);
 
@@ -864,8 +864,8 @@ class CarPendulumScene {
    * @param {object} state PendulumState
    */
   _drawTensionInset(ctx, state) {
-    const insetW = clamp(this.width * 0.28, 160, 220);
-    const insetH = clamp(insetW * 0.64, 106, 142);
+    const insetW = clamp(this.width * 0.36, 185, 310);
+    const insetH = clamp(insetW * 0.65, 124, 200);
     const x = clamp(this.width * 0.02, 12, 20);
     const y = clamp(this.height * 0.04, 12, 20);
     const right = x + insetW;
@@ -873,8 +873,8 @@ class CarPendulumScene {
 
     if (right > this.width - 8 || bottom > this.height - 8) return;
 
-    const titleSize = clamp(insetW * 0.065, 10, 13);
-    const valueSize = clamp(insetW * 0.058, 9, 11);
+    const titleSize = clamp(insetW * 0.052, 11, 16);
+    const valueSize = clamp(insetW * 0.045, 10, 13);
     const tension = Math.max(0, finite(state.tension));
     const tensionX = finite(state.tensionX);
     const tensionY = finite(state.tensionY);
@@ -896,9 +896,9 @@ class CarPendulumScene {
     ctx.fillStyle = this.colors.text;
     ctx.fillText('Tension components', x + 10, y + 7);
 
-    const originX = x + insetW * 0.29;
-    const originY = y + insetH * 0.58;
-    const arrowLength = Math.min(insetH * 0.33, insetW * 0.23);
+    const originX = x + insetW * 0.31;
+    const originY = y + insetH * 0.62;
+    const arrowLength = Math.min(insetH * 0.42, insetW * 0.27);
     const theta = clamp(finite(state.angle), -55 * Math.PI / 180, 55 * Math.PI / 180);
     const sinTheta = Math.sin(theta);
     const cosTheta = Math.cos(theta);

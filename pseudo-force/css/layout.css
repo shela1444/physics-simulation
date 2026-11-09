@@ -61,12 +61,6 @@ body {
   line-height: 1.2;
 }
 
-.header__subtitle {
-  font-size: 12px;
-  color: var(--text-muted);
-  line-height: 1.35;
-}
-
 .header__actions {
   display: flex;
   align-items: center;
@@ -206,10 +200,6 @@ body {
   .header {
     flex-wrap: wrap;
     gap: var(--space-xs);
-  }
-
-  .header__subtitle {
-    font-size: 11px;
   }
 
   .footer {
