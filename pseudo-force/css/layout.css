@@ -221,6 +221,13 @@ body {
   }
 }
 
+/* Taller scene on narrow screens makes room for the tension inset. */
+@media (max-width: 560px) {
+  .canvas-wrapper canvas {
+    aspect-ratio: 1 / 1;
+  }
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -27,6 +27,11 @@ const FALLBACK_COLORS = {
   velocity: '#58a6ff',
   accel: '#3fb950',
   decel: '#d29922',
+  tension: '#f0883e',
+  tensionX: '#79c0ff',
+  tensionY: '#d2a8ff',
+  insetBg: 'rgba(13, 17, 23, 0.88)',
+  insetBorder: 'rgba(139, 148, 158, 0.45)',
   text: '#e6edf3',
   muted: '#8b949e'
 };
@@ -44,6 +49,11 @@ const COLOR_TOKENS = {
   velocity: '--vector-velocity',
   accel: '--accel-color',
   decel: '--decel-color',
+  tension: '--vector-tension',
+  tensionX: '--vector-tension-x',
+  tensionY: '--vector-tension-y',
+  insetBg: '--inset-bg',
+  insetBorder: '--inset-border',
   text: '--text',
   muted: '--text-muted'
 };
@@ -139,6 +149,50 @@ function strokeHorizontalArrow(ctx, x1, y1, x2, y2, color) {
   ctx.fill();
 }
 
+/**
+ * Draw an arrow in any direction.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x1
+ * @param {number} y1
+ * @param {number} x2
+ * @param {number} y2
+ * @param {string} color
+ * @param {number} [lineWidth]
+ */
+function strokeArrow(ctx, x1, y1, x2, y2, color, lineWidth = 2.4) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const length = Math.hypot(dx, dy);
+  if (length < 0.75) return;
+
+  const ux = dx / length;
+  const uy = dy / length;
+  const head = Math.min(clamp(length * 0.32, 4, 10), length * 0.52);
+  const halfWidth = head * 0.48;
+  const baseX = x2 - ux * head;
+  const baseY = y2 - uy * head;
+  const perpX = -uy;
+  const perpY = ux;
+
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(baseX, baseY);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(baseX + perpX * halfWidth, baseY + perpY * halfWidth);
+  ctx.lineTo(baseX - perpX * halfWidth, baseY - perpY * halfWidth);
+  ctx.closePath();
+  ctx.fill();
+}
+
 class CarPendulumScene {
   /**
    * @param {HTMLCanvasElement} canvas
@@ -210,6 +264,7 @@ class CarPendulumScene {
     this._drawCar(ctx, state);
     this._drawPendulum(ctx, state);
     this._drawArrows(ctx, state);
+    this._drawTensionInset(ctx, state);
   }
 
   // ---------------------------------------------------------------------------
@@ -703,7 +758,7 @@ class CarPendulumScene {
   }
 
   _drawArrows(ctx, state) {
-    const anchorX = this.width * 0.5;
+    const anchorX = this.width * 0.78;
     const maxLength = this._maxArrowLength(anchorX);
     const fontSize = clamp(this.width * 0.0135, 10, 13);
 
@@ -800,6 +855,128 @@ class CarPendulumScene {
       ? `a = ${magnitude.toFixed(1)} m/s² · deceleration`
       : `a = ${magnitude.toFixed(1)} m/s²`;
     ctx.fillText(label, labelX, y - fontSize - 3);
+  }
+
+  /**
+   * Draw a compact free-body inset resolving tension into horizontal and
+   * vertical components.
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {object} state PendulumState
+   */
+  _drawTensionInset(ctx, state) {
+    const insetW = clamp(this.width * 0.28, 160, 220);
+    const insetH = clamp(insetW * 0.64, 106, 142);
+    const x = clamp(this.width * 0.02, 12, 20);
+    const y = clamp(this.height * 0.04, 12, 20);
+    const right = x + insetW;
+    const bottom = y + insetH;
+
+    if (right > this.width - 8 || bottom > this.height - 8) return;
+
+    const titleSize = clamp(insetW * 0.065, 10, 13);
+    const valueSize = clamp(insetW * 0.058, 9, 11);
+    const tension = Math.max(0, finite(state.tension));
+    const tensionX = finite(state.tensionX);
+    const tensionY = finite(state.tensionY);
+
+    ctx.save();
+
+    // Panel.
+    roundedRectPath(ctx, x, y, insetW, insetH, 10);
+    ctx.fillStyle = this.colors.insetBg;
+    ctx.fill();
+    ctx.strokeStyle = this.colors.insetBorder;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Title.
+    ctx.font = `600 ${titleSize}px ${FONT_STACK}`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = this.colors.text;
+    ctx.fillText('Tension components', x + 10, y + 7);
+
+    const originX = x + insetW * 0.29;
+    const originY = y + insetH * 0.58;
+    const arrowLength = Math.min(insetH * 0.33, insetW * 0.23);
+    const theta = clamp(finite(state.angle), -55 * Math.PI / 180, 55 * Math.PI / 180);
+    const sinTheta = Math.sin(theta);
+    const cosTheta = Math.cos(theta);
+
+    const txTipX = originX + sinTheta * arrowLength;
+    const txTipY = originY;
+    const tyTipX = originX;
+    const tyTipY = originY - cosTheta * arrowLength;
+    const tipX = txTipX;
+    const tipY = tyTipY;
+
+    // Dashed component rectangle.
+    ctx.save();
+    ctx.setLineDash([3, 3]);
+    ctx.strokeStyle = this.colors.insetBorder;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(txTipX, txTipY);
+    ctx.lineTo(tipX, tipY);
+    ctx.moveTo(tyTipX, tyTipY);
+    ctx.lineTo(tipX, tipY);
+    ctx.stroke();
+    ctx.restore();
+
+    // Resultant behind the components so the decomposition stays visible even
+    // when a component nearly coincides with the rope direction.
+    strokeArrow(ctx, originX, originY, tipX, tipY, this.colors.tension, 4);
+    if (Math.abs(sinTheta) * arrowLength > 1.5) {
+      strokeArrow(ctx, originX, originY, txTipX, txTipY, this.colors.tensionX, 2.2);
+    }
+    if (cosTheta * arrowLength > 1.5) {
+      strokeArrow(ctx, originX, originY, tyTipX, tyTipY, this.colors.tensionY, 2.2);
+    }
+
+    // Bob marker at the vector origin.
+    ctx.beginPath();
+    ctx.arc(originX, originY, clamp(insetW * 0.018, 3, 4.5), 0, TAU);
+    ctx.fillStyle = this.colors.bob;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 246, 194, 0.6)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Numeric readouts.
+    ctx.font = `600 ${valueSize}px ${FONT_STACK}`;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+
+    const valueY1 = bottom - valueSize * 2 - 7;
+    const valueY2 = bottom - valueSize - 5;
+
+    ctx.fillStyle = this.colors.tension;
+    ctx.fillText(`T = ${this._formatForce(tension)} N`, x + 10, valueY1);
+
+    const txText = `Tx = ${this._formatForce(Math.abs(tensionX))} N`;
+    ctx.fillStyle = this.colors.tensionX;
+    ctx.fillText(txText, x + 10, valueY2);
+    const txWidth = ctx.measureText(txText).width;
+
+    ctx.fillStyle = this.colors.tensionY;
+    ctx.fillText(
+      `Ty = ${this._formatForce(Math.abs(tensionY))} N`,
+      x + 10 + txWidth + 10,
+      valueY2
+    );
+
+    ctx.restore();
+  }
+
+  /**
+   * @param {number} value
+   * @returns {string}
+   */
+  _formatForce(value) {
+    const magnitude = Math.abs(finite(value));
+    if (magnitude >= 100) return magnitude.toFixed(0);
+    if (magnitude >= 10) return magnitude.toFixed(1);
+    return magnitude.toFixed(2);
   }
 }
 

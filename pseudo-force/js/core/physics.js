@@ -137,6 +137,9 @@ class PendulumModel {
    *   equilibriumAngleDeg: number,
    *   pseudoForce: number,
    *   weight: number,
+   *   tension: number,
+   *   tensionX: number,
+   *   tensionY: number,
    *   mass: number,
    *   ropeLength: number,
    *   gravity: number
@@ -151,6 +154,15 @@ class PendulumModel {
     } = this.params;
 
     const equilibriumAngle = this.getEquilibriumAngle();
+    const angularSpeed = this.angularVelocity;
+    const tension = Math.max(
+      0,
+      mass * (
+        gravity * Math.cos(this.angle) +
+        acceleration * Math.sin(this.angle) +
+        ropeLength * angularSpeed * angularSpeed
+      )
+    );
 
     return {
       time: this.time,
@@ -168,6 +180,9 @@ class PendulumModel {
 
       pseudoForce: mass * Math.abs(acceleration),
       weight: mass * gravity,
+      tension,
+      tensionX: tension * Math.sin(this.angle),
+      tensionY: tension * Math.cos(this.angle),
 
       mass,
       ropeLength,
