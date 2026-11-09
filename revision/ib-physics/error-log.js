@@ -14,6 +14,7 @@
   let bank = null;
   let auth = null;
   let records = [];
+  const selectedIds = new Set();
   const ui = {
     draft: { year: "2022", month: "May", tz: "TZ1", level: "SL" },
     first: null,
@@ -81,6 +82,7 @@
       .order("last_logged_at", { ascending: false });
     if (error) { renderError(error.message); return false; }
     records = data || [];
+    for (const id of [...selectedIds]) if (!records.some((r) => r.id === id)) selectedIds.delete(id);
     return true;
   }
 
@@ -165,16 +167,167 @@
       </section>
 
       <section class="card">
-        <div class="toolbar"><div><h2>Error history</h2><p class="sub">Mastered questions stay in history but are left out of practice.</p></div>
-        <button class="btn primary" onclick="startPractice()" ${unresolved.length ? "" : "disabled"}>Practise all active (${unresolved.length})</button></div>
+        <div class="toolbar"><div><h2>Error history</h2><p class="sub">Select any questions to export as a PDF, or practise all active errors.</p></div>
+        <div class="export-actions">
+          <button class="btn ghost" onclick="selectAllRows()">Select all</button>
+          <button class="btn ghost" onclick="clearExportSelection()">Clear</button>
+          <button class="btn primary" id="exportSelectedBtn" onclick="exportSelectedPdf()" disabled>Export selected PDF (0)</button>
+          <button class="btn primary" onclick="startPractice()" ${unresolved.length ? "" : "disabled"}>Practise all active (${unresolved.length})</button>
+        </div></div>
         ${records.length ? renderTable() : `<div class="empty">No errors logged yet.</div>`}
       </section>`;
+    updateExportButton();
   }
 
   function renderTable() {
-    return `<div class="table-wrap"><table><thead><tr><th>Source</th><th>MC ID</th><th>Subtopic</th><th>Logged</th><th>Correct</th><th>Status</th></tr></thead><tbody>
-      ${records.map((r) => `<tr><td>${esc(r.source)}</td><td>${esc(r.mc_id)}</td><td>${esc(r.topic)}</td><td>${r.times_logged}×</td><td>${r.practice_correct}/2</td><td><span class="status ${r.mastered ? "mastered" : ""}">${r.mastered ? "Mastered" : "Active"}</span></td></tr>`).join("")}
+    return `<div class="table-wrap"><table><thead><tr><th class="selectcol"></th><th>Source</th><th>MC ID</th><th>Subtopic</th><th>Logged</th><th>Correct</th><th>Status</th></tr></thead><tbody>
+      ${records.map((r) => `<tr><td class="selectcol"><input class="rowcheck" type="checkbox" ${selectedIds.has(r.id) ? "checked" : ""} onchange="toggleExportSelection('${esc(r.id)}', this.checked)" aria-label="Select ${esc(r.mc_id)}"></td><td>${esc(r.source)}</td><td>${esc(r.mc_id)}</td><td>${esc(r.topic)}</td><td>${r.times_logged}×</td><td>${r.practice_correct}/2</td><td><span class="status ${r.mastered ? "mastered" : ""}">${r.mastered ? "Mastered" : "Active"}</span></td></tr>`).join("")}
     </tbody></table></div>`;
+  }
+
+  function updateExportButton() {
+    const btn = document.getElementById("exportSelectedBtn");
+    if (!btn) return;
+    btn.textContent = `Export selected PDF (${selectedIds.size})`;
+    btn.disabled = selectedIds.size === 0;
+  }
+  function toggleExportSelection(id, checked) {
+    if (checked) selectedIds.add(id); else selectedIds.delete(id);
+    updateExportButton();
+  }
+  function selectAllRows() {
+    for (const r of records) selectedIds.add(r.id);
+    render();
+  }
+  function clearExportSelection() {
+    selectedIds.clear();
+    render();
+  }
+
+  function imageUrl(part) {
+    const path = typeof part === "string" ? part : (part.path || part.image || "");
+    return "error-book/" + String(path).replace(/^\/+/, "");
+  }
+  function loadImage(url) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("Could not load " + url));
+      img.src = url;
+    });
+  }
+  async function imageForPdf(part) {
+    const img = await loadImage(imageUrl(part));
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0);
+    return { data: canvas.toDataURL("image/jpeg", 0.93), width: img.naturalWidth, height: img.naturalHeight };
+  }
+  function questionParts(q) {
+    return (q.images && q.images.length) ? q.images : [{ path: q.image, width: q.width, height: q.height }];
+  }
+  async function exportSelectedPdf() {
+    const JsPDF = window.jspdf && window.jspdf.jsPDF;
+    if (!JsPDF) { toast("PDF library did not load."); return; }
+    const chosen = records.filter((r) => selectedIds.has(r.id));
+    if (!chosen.length) { toast("Select at least one question."); return; }
+    const button = document.getElementById("exportSelectedBtn");
+    if (button) { button.disabled = true; button.textContent = "Preparing PDF…"; }
+    try {
+      const prepared = [];
+      for (const rec of chosen) {
+        const q = bankQuestion(rec.mc_id);
+        if (!q) continue;
+        const images = [];
+        for (const part of questionParts(q)) images.push(await imageForPdf(part));
+        prepared.push({ rec, q, images });
+      }
+      if (!prepared.length) throw new Error("No selected questions could be loaded.");
+
+      const pdf = new JsPDF({ unit: "pt", format: "a4" });
+      const pageW = 595.28, pageH = 841.89;
+      const margin = 34, bottom = 806, contentTop = 82;
+      const rowH = (bottom - contentTop - 12) / 2;
+      let slot = 0, y = contentTop;
+
+      function header() {
+        pdf.setFont("helvetica", "bold"); pdf.setFontSize(15);
+        pdf.text("Things to be Remembered — Selected Errors", margin, 32);
+        pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
+        pdf.text(`Student: ${auth.profile.display_name}`, margin, 49);
+        const date = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+        pdf.text(`Date: ${date}`, pageW - margin, 49, { align: "right" });
+        pdf.setDrawColor(205, 212, 225); pdf.line(margin, 59, pageW - margin, 59);
+      }
+      function newPage() { pdf.addPage(); header(); y = contentTop; slot = 0; }
+      function label(q, rec) {
+        pdf.setFont("helvetica", "bold"); pdf.setFontSize(8);
+        pdf.setTextColor(47, 69, 168);
+        pdf.text(q.id + "  ·  " + rec.source, margin, y);
+        pdf.setTextColor(20, 20, 20); y += 13;
+      }
+      function drawImage(image, maxX, maxY) {
+        const scale = Math.min(maxX / image.width, maxY / image.height);
+        const w = image.width * scale, h = image.height * scale;
+        pdf.addImage(image.data, "JPEG", margin, y, w, h, undefined, "FAST");
+        y += h + 12;
+      }
+
+      header();
+      for (const item of prepared) {
+        const q = item.q;
+        if (item.images.length > 1) {
+          // Keep all parts together; allow the question to use extra pages.
+          if (slot > 0) newPage();
+          label(q, item.rec);
+          for (let i = 0; i < item.images.length; i++) {
+            if (i > 0) newPage();
+            if (i > 0) {
+              pdf.setFont("helvetica", "bold"); pdf.setFontSize(8);
+              pdf.setTextColor(47, 69, 168); pdf.text(q.id + " (continued)", margin, y);
+              pdf.setTextColor(20, 20, 20); y += 13;
+            }
+            drawImage(item.images[i], pageW - 2 * margin, bottom - y - 4);
+          }
+          slot = 2;
+          continue;
+        }
+        if (slot >= 2 || y + rowH > bottom) newPage();
+        label(q, item.rec);
+        drawImage(item.images[0], pageW - 2 * margin, rowH - 18);
+        slot += 1;
+      }
+
+      // Answer key.
+      pdf.addPage(); header();
+      y = contentTop;
+      pdf.setFont("helvetica", "bold"); pdf.setFontSize(13);
+      pdf.text("Answer Key", margin, y); y += 20;
+      pdf.setFont("helvetica", "bold"); pdf.setFontSize(8);
+      pdf.text("MC ID", margin, y); pdf.text("Answer", margin + 80, y); pdf.text("Source", margin + 130, y); y += 12;
+      pdf.setFont("helvetica", "normal"); pdf.setFontSize(8);
+      for (const item of prepared) {
+        if (y > 790) { pdf.addPage(); header(); y = contentTop; }
+        const source = pdf.splitTextToSize(item.rec.source, pageW - margin * 2 - 130);
+        pdf.text(item.q.id, margin, y); pdf.text(item.q.answer, margin + 80, y); pdf.text(source[0] || "", margin + 130, y);
+        y += 13;
+      }
+      const pages = pdf.getNumberOfPages();
+      for (let i = 1; i <= pages; i++) {
+        pdf.setPage(i); pdf.setFont("helvetica", "normal"); pdf.setFontSize(7); pdf.setTextColor(102, 112, 133);
+        pdf.text(`Page ${i} of ${pages}`, pageW - margin, 824, { align: "right" });
+      }
+      pdf.save(`error-book-selected-${new Date().toISOString().slice(0,10)}.pdf`);
+      toast(`PDF exported: ${prepared.length} question${prepared.length === 1 ? "" : "s"}.`);
+    } catch (error) {
+      toast(error.message || "Could not create the PDF.");
+    } finally {
+      if (button) { button.disabled = selectedIds.size === 0; button.textContent = `Export selected PDF (${selectedIds.size})`; }
+    }
   }
 
   function setDraft(k, v) { ui.draft[k] = v; ui.first = null; ui.confirmed = false; ui.preview = null; ui.error = ""; ui.saved = ""; render(); }
@@ -289,6 +442,10 @@
   window.clearPreview = clearPreview;
   window.saveCurrentQuestion = saveCurrentQuestion;
   window.startPractice = startPractice;
+  window.toggleExportSelection = toggleExportSelection;
+  window.selectAllRows = selectAllRows;
+  window.clearExportSelection = clearExportSelection;
+  window.exportSelectedPdf = exportSelectedPdf;
   window.choosePractice = choosePractice;
   window.submitPractice = submitPractice;
   window.nextPractice = nextPractice;

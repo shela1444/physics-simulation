@@ -92,3 +92,8 @@ tr:last-child td{border-bottom:none}
 .auth-form input{font:inherit;border:1px solid var(--line);border-radius:9px;padding:10px 11px;background:#fff;color:var(--ink)}
 .auth-form input:focus{outline:3px solid rgba(59,91,219,.15);border-color:var(--brand)}
 .form-error{color:var(--bad);font-size:12px;font-weight:700;min-height:18px;margin-top:9px}
+
+.selectcol{width:34px;text-align:center}
+.rowcheck{width:16px;height:16px;accent-color:var(--brand);cursor:pointer}
+.export-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+.export-actions .btn{padding:7px 9px;font-size:11px}
