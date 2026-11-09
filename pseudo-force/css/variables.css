@@ -1,0 +1,72 @@
+:root {
+  /* Core palette */
+  --bg: #0d1117;
+  --panel: #161b22;
+  --panel-hover: #1f2428;
+  --border: #30363d;
+  --border-light: #484f58;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --text-dim: #6e7681;
+
+  --accent: #58a6ff;
+  --accent-hover: #79b8ff;
+  --success: #3fb950;
+  --success-hover: #56d364;
+  --warning: #d29922;
+  --warning-hover: #e3b341;
+  --danger: #f85149;
+  --danger-hover: #ff7b72;
+
+  /* Scene / vectors */
+  --vector-velocity: #58a6ff;
+  --accel-color: #3fb950;
+  --decel-color: #d29922;
+  --scene-sky-top: #08111d;
+  --scene-sky-bottom: #142b43;
+  --road-dark: #171b22;
+  --road-line: rgba(230, 237, 243, 0.55);
+  --car-body: #2f81f7;
+  --car-body-dark: #1f5fa8;
+  --car-window: #0a1929;
+  --bob-color: #f2cc60;
+  --rope-color: #b7c0ca;
+
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+
+  /* Border radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* Touch targets */
+  --touch-sm: 48px;
+  --touch-md: 56px;
+  --touch-lg: 64px;
+  --touch-xl: 80px;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 300ms ease;
+  --transition-slow: 500ms ease;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+
+  /* Z-index */
+  --z-base: 1;
+  --z-dropdown: 100;
+  --z-modal: 200;
+  --z-toast: 300;
+  --z-tooltip: 400;
+}
