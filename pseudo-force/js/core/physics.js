@@ -135,7 +135,6 @@ class PendulumModel {
    *   angularVelocity: number,
    *   equilibriumAngle: number,
    *   equilibriumAngleDeg: number,
-   *   pseudoForce: number,
    *   weight: number,
    *   tension: number,
    *   tensionX: number,
@@ -178,7 +177,6 @@ class PendulumModel {
       equilibriumAngle,
       equilibriumAngleDeg: equilibriumAngle * (180 / Math.PI),
 
-      pseudoForce: mass * Math.abs(acceleration),
       weight: mass * gravity,
       tension,
       tensionX: tension * Math.sin(this.angle),

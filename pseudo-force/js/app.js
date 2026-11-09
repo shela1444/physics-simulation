@@ -167,14 +167,14 @@ class PseudoForceApp {
     }
 
     if (velocity * acceleration < 0) {
-      return 'Braking — the bob swings forward.';
+      return `Braking — the bob swings ${acceleration > 0 ? 'left' : 'right'}.`;
     }
 
     if (acceleration > 0) {
-      return 'Accelerating forward — the bob trails backward.';
+      return 'Accelerating forward — the bob leans left.';
     }
 
-    return 'Accelerating in reverse — the bob leans forward.';
+    return 'Accelerating in reverse — the bob leans right.';
   }
 
   /**

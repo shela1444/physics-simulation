@@ -277,10 +277,6 @@
   color: var(--bob-color);
 }
 
-.hud__value--pseudo {
-  color: var(--warning);
-}
-
 .hud__value--mass {
   color: var(--bob-color);
 }
