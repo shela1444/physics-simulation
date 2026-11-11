@@ -272,7 +272,7 @@
 
       <section class="panel">
         <h2>Attempt records</h2>
-        <p class="sub">Latest completed attempts from classes you own. No per-question answers are stored.</p>
+        <p class="sub">Latest completed attempts from classes you own. Open <a href="history.html">Quiz history</a> for question-level results grouped by topic.</p>
         <div class="filters">
           <div class="field">
             <label for="filterClass">Class</label>

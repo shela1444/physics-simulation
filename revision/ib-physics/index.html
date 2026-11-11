@@ -244,6 +244,7 @@ body{-webkit-text-size-adjust:100%}
       <span class="who" id="accountName"></span>
       <a class="btn ghost hidden" id="teacherDashLink" href="teacher.html">Teacher dashboard</a>
       <a class="btn ghost" href="error-log.html">Error book</a>
+      <a class="btn ghost" href="history.html">History</a>
       <button class="btn ghost hidden" id="signOutBtn" onclick="signOutQuiz()">Sign out</button>
       <button class="btn ghost hidden" id="changeTopicBtn" onclick="goTopics()">Change topic</button>
     </div>
@@ -683,13 +684,31 @@ function toggleOpt(i){
   }
   updateSelectionUI();
 }
+function answerSnapshot(q,chosen,count,result){
+  const mc=isMC(q);
+  return {
+    qid:q.id,
+    type:mc?'mc':'recall',
+    topic:q.topic,
+    topicTitle:q.topic_title,
+    source:mc?(q.occurrences||q.source||''):(q.source||''),
+    question:mc?'':(q.question||''),
+    image:mc?(q.image||''):'',
+    alt:mc?(q.alt||q.id):'',
+    selected:chosen.map(o=>o.text),
+    answer:mc?q.answer:(q.fullAnswer||''),
+    result,
+    count,
+    marks:Number(q.marks)||1
+  };
+}
 function submitAnswer(){
   const q=currentQ();
   if(state.selected.size!==q.marks) return;
   if(isMC(q)){
     const chosen=[...state.selected].map(i=>state.options[i]);
     const result=chosen[0]&&chosen[0].correct?'correct':'learn';
-    state.answers.push({qid:q.id,selected:chosen.map(o=>o.text),count:result==='correct'?1:0,result});
+    state.answers.push(answerSnapshot(q,chosen,result==='correct'?1:0,result));
     state.revealed=true;
     renderQuiz();
     document.getElementById('feedback').scrollIntoView({behavior:'smooth',block:'start'});
@@ -702,7 +721,7 @@ function submitAnswer(){
   let result='learn';
   if(exact) result='correct';
   else if(count>=1) result='almost';
-  state.answers.push({qid:q.id,selected:chosen.map(o=>o.text),count,result});
+  state.answers.push(answerSnapshot(q,chosen,count,result));
   state.revealed=true;
   renderQuiz();
   document.getElementById('feedback').scrollIntoView({behavior:'smooth',block:'start'});
@@ -759,6 +778,7 @@ function attemptSummary(){
     selection:state.selection||'ALL',
     totalQuestions:state.round.length,
     correctCount:correct, almostCount:almost, learnCount:learn,
+    answers:state.answers.map(a=>({...a})),
     durationSeconds:state.attemptStartedAt?(completed-state.attemptStartedAt)/1000:0,
     startedAt:new Date(state.attemptStartedAt||completed).toISOString(),
     completedAt:new Date(completed).toISOString()

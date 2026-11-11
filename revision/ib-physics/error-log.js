@@ -106,7 +106,7 @@
   }
   function renderTeacherNotice() {
     setAccount(auth);
-    app.innerHTML = `<div class="authcard"><h1>Teacher account</h1><p>Open the teacher dashboard to manage the 6IB roster and view all student records.</p><div class="actions-inline"><a class="btn primary" href="teacher.html">Teacher dashboard</a><button class="btn ghost" onclick="signOutErrorBook()">Sign out</button></div></div>`;
+    app.innerHTML = `<div class="authcard"><h1>Teacher account</h1><p>Open the teacher dashboard to manage classes and records, or view question-level quiz history for every student.</p><div class="actions-inline"><a class="btn primary" href="teacher.html">Teacher dashboard</a><a class="btn ghost" href="history.html">Quiz history</a><button class="btn ghost" onclick="signOutErrorBook()">Sign out</button></div></div>`;
   }
   function renderError(message) {
     setAccount(null);

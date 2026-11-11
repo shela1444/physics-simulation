@@ -213,6 +213,7 @@
       correct_count: Number(attempt.correctCount),
       almost_count: Number(attempt.almostCount),
       learn_count: Number(attempt.learnCount),
+      answers: Array.isArray(attempt.answers) ? attempt.answers : [],
       duration_seconds: Math.max(0, Math.round(Number(attempt.durationSeconds) || 0)),
       started_at: attempt.startedAt,
       completed_at: attempt.completedAt
