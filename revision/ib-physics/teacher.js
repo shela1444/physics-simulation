@@ -13,6 +13,7 @@
     attempts: [],
     errorStudents: [],
     errorRecords: [],
+    errorClassId: "",
     filters: {
       classId: "",
       student: "",
@@ -209,6 +210,9 @@
     }));
     state.errorStudents = rosterResult.data || [];
     state.errorRecords = errorsResult.data || [];
+    if (!state.errorClassId || !state.classes.some((c) => c.id === state.errorClassId)) {
+      state.errorClassId = state.classes[0] ? state.classes[0].id : "";
+    }
 
     renderDashboard();
   }
@@ -242,8 +246,16 @@
       <div class="stats" id="stats"></div>
 
       <section class="panel">
-        <h2>Error Book — 6IB</h2>
+        <h2>Error Book</h2>
         <p class="sub">Shared mistakes imported from the scanned papers. Students see only their own rows.</p>
+        <div class="row" style="margin-bottom:12px">
+          <div class="field" style="min-width:180px">
+            <label for="errorClassFilter">Class</label>
+            <select class="input" id="errorClassFilter" onchange="setErrorClass(this.value)">
+              ${state.classes.map((c) => `<option value="${esc(c.id)}" ${c.id === state.errorClassId ? "selected" : ""}>${esc(c.name)}</option>`).join("")}
+            </select>
+          </div>
+        </div>
         ${renderErrorBook()}
       </section>
 
@@ -325,9 +337,12 @@
   }
 
   function renderErrorBook() {
-    if (!state.errorStudents.length) return `<div class="empty">No roster students loaded.</div>`;
+    const students = state.errorStudents.filter((s) => s.class_id === state.errorClassId);
+    if (!students.length) return `<div class="empty">No students in this class.</div>`;
+    const ids = new Set(students.map((s) => s.id));
+    const errs = state.errorRecords.filter((r) => ids.has(r.roster_student_id));
     const byRoster = new Map();
-    for (const r of state.errorRecords) {
+    for (const r of errs) {
       const a = byRoster.get(r.roster_student_id) || { total: 0, active: 0, mastered: 0, last: "" };
       a.total += 1;
       if (r.mastered) a.mastered += 1; else a.active += 1;
@@ -335,12 +350,19 @@
       byRoster.set(r.roster_student_id, a);
     }
     return `<div class="table-wrap"><table><thead><tr><th>Student</th><th>Username</th><th>Account</th><th>Errors</th><th>Active</th><th>Mastered</th><th>Last logged</th></tr></thead><tbody>
-      ${state.errorStudents.map((s) => {
+      ${students.map((s) => {
         const a = byRoster.get(s.id) || { total: 0, active: 0, mastered: 0, last: "" };
         return `<tr><td>${esc(s.display_name)}</td><td>${esc(s.username)}</td><td>${s.auth_user_id ? "Linked" : "Not linked"}</td><td>${a.total}</td><td>${a.active}</td><td>${a.mastered}</td><td>${a.last ? esc(formatDate(a.last)) : "—"}</td></tr>`;
       }).join("")}
     </tbody></table></div>`;
   }
+
+  function setErrorClass(id) {
+    if (!state.classes.some((c) => c.id === id)) return;
+    state.errorClassId = id;
+    renderDashboard();
+  }
+
 
   function applyFilterValues() {
     const map = {
@@ -542,6 +564,7 @@
   window.loadDashboard = loadDashboard;
   window.createClass = createClass;
   window.updateFilter = updateFilter;
+  window.setErrorClass = setErrorClass;
   window.copyCode = copyCode;
 
   bootTeacher();
