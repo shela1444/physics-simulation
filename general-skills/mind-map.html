@@ -1,0 +1,3342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#f6f7fb">
+<title>Mind Map Builder</title>
+<style>
+  :root {
+    --bg: #f6f7fb;
+    --surface: #ffffff;
+    --ink: #0f172a;
+    --muted: #64748b;
+    --muted-2: #94a3b8;
+    --line: #e2e8f0;
+    --accent: #4f46e5;
+    --accent-strong: #4338ca;
+    --accent-soft: #eef2ff;
+    --idea-bg: #eef2ff;
+    --idea-line: #c7d2fe;
+    --idea-ink: #1e1b4b;
+    --idea-muted: #6366f1;
+    --table-bg: #ecfdf5;
+    --table-line: #a7f3d0;
+    --table-head: #d1fae5;
+    --table-ink: #064e3b;
+    --table-muted: #059669;
+    --table-grid: rgba(5, 150, 105, 0.24);
+    --amber: #b45309;
+    --amber-ink: #78350f;
+    --amber-bg: #fffbeb;
+    --amber-line: #d8b573;
+    --danger: #dc2626;
+    --danger-soft: #fef2f2;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --shadow-soft: 0 10px 30px -18px rgba(15, 23, 42, 0.35);
+    --shadow-float: 0 18px 48px -24px rgba(15, 23, 42, 0.55);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body { height: 100%; margin: 0; padding: 0; }
+
+  body {
+    overflow: hidden;
+    overscroll-behavior: none;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button, input { font: inherit; }
+  button { color: inherit; }
+
+  #app {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* ---------- Top bar ---------- */
+
+  #topbar {
+    position: relative;
+    z-index: 25;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+    height: calc(62px + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+    padding-left: calc(12px + env(safe-area-inset-left));
+    padding-right: calc(12px + env(safe-area-inset-right));
+    background: rgba(255, 255, 255, 0.84);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    backdrop-filter: blur(16px) saturate(140%);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.65) inset;
+  }
+
+  .brand-mark {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    color: #ffffff;
+    background: linear-gradient(145deg, #6366f1, #4338ca 75%);
+    box-shadow: 0 6px 14px -7px rgba(67, 56, 202, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+  .brand-mark svg { width: 20px; height: 20px; }
+
+  #map-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    width: 100%;
+    height: 44px;
+    padding: 0 10px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--ink);
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    text-overflow: ellipsis;
+    transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+  }
+  #map-title::placeholder { color: var(--muted-2); }
+  #map-title:hover { background: rgba(241, 245, 249, 0.7); }
+  #map-title:focus {
+    outline: none;
+    background: var(--surface);
+    border-color: rgba(79, 70, 229, 0.45);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.13);
+  }
+
+  .topbar-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background-color 120ms ease, border-color 120ms ease, transform 100ms ease, box-shadow 120ms ease;
+  }
+  .btn svg { width: 18px; height: 18px; flex: 0 0 auto; }
+  .btn:hover { background: #f8fafc; border-color: rgba(100, 116, 139, 0.42); }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary {
+    background: linear-gradient(180deg, #5b54ee, var(--accent));
+    border-color: transparent;
+    color: #ffffff;
+    box-shadow: 0 7px 18px -9px rgba(79, 70, 229, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  }
+  .btn.primary:hover { background: linear-gradient(180deg, #514ae8, var(--accent-strong)); }
+  .btn.danger {
+    background: var(--danger);
+    border-color: transparent;
+    color: #ffffff;
+    box-shadow: 0 7px 18px -10px rgba(220, 38, 38, 0.9);
+  }
+  .btn.danger:hover { background: #b91c1c; }
+  .btn:disabled { cursor: not-allowed; opacity: 0.55; transform: none; box-shadow: none; }
+
+  #export-btn[data-busy="true"] { opacity: 0.78; cursor: progress; }
+  #export-btn .spinner {
+    display: none;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: spin 750ms linear infinite;
+  }
+  #export-btn[data-busy="true"] .spinner { display: inline-block; }
+  #export-btn[data-busy="true"] .icon-export { display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- Canvas ---------- */
+
+  #viewport {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    touch-action: none;
+    overscroll-behavior: none;
+    background-color: var(--bg);
+    background-image: radial-gradient(circle, rgba(100, 116, 139, 0.27) 1.15px, transparent 1.35px);
+    background-size: 26px 26px;
+    background-position: 0 0;
+    cursor: grab;
+  }
+  #viewport.panning { cursor: grabbing; }
+
+  #edge-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .edge-line {
+    fill: none;
+    stroke: #4f46e5;
+    stroke-width: 2;
+    stroke-linecap: round;
+    pointer-events: none;
+  }
+  .edge.selected .edge-line { stroke: #312e81; stroke-width: 3.2; }
+
+  .edge-hit {
+    fill: none;
+    stroke: rgba(0, 0, 0, 0);
+    stroke-width: 16;
+    pointer-events: stroke;
+    cursor: pointer;
+  }
+
+  @media (hover: hover) {
+    .edge:hover .edge-line { stroke: #4338ca; stroke-width: 2.7; }
+    .edge.selected:hover .edge-line { stroke: #312e81; stroke-width: 3.2; }
+  }
+
+  #world {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+    width: 0;
+    height: 0;
+    transform-origin: 0 0;
+    pointer-events: none;
+    will-change: transform;
+  }
+
+  /* ---------- Cards ---------- */
+
+  .card {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    box-sizing: border-box;
+    width: max-content;
+    min-width: 88px;
+    max-width: min(320px, calc(100vw - 80px));
+    pointer-events: auto;
+    border: 1px solid var(--idea-line);
+    border-radius: 12px;
+    background: var(--idea-bg);
+    color: var(--idea-ink);
+    box-shadow: 0 14px 32px -22px rgba(49, 46, 129, 0.38), 0 2px 6px rgba(49, 46, 129, 0.05);
+    will-change: transform;
+    transition: box-shadow 130ms ease;
+  }
+
+  .card.table {
+    z-index: 2;
+    width: 360px;
+    min-width: 240px;
+    max-width: min(520px, calc(100vw - 80px));
+    border-color: var(--table-line);
+    background: var(--table-bg);
+    color: var(--table-ink);
+    box-shadow: 0 14px 32px -22px rgba(6, 78, 59, 0.36), 0 2px 6px rgba(6, 78, 59, 0.05);
+  }
+
+  .card.annotation {
+    z-index: 3;
+    border: 1px dashed var(--amber-line);
+    background: var(--amber-bg);
+    color: var(--amber-ink);
+    box-shadow: 0 14px 30px -22px rgba(120, 53, 15, 0.42), 0 2px 6px rgba(120, 53, 15, 0.04);
+  }
+
+  .card:hover { z-index: 5; }
+  .card.selected,
+  .card:focus-within { z-index: 10; }
+  .card.annotation.selected { z-index: 11; }
+
+  .card.selected {
+    box-shadow:
+      0 0 0 2px var(--idea-bg),
+      0 0 0 4px rgba(79, 70, 229, 0.88),
+      0 18px 40px -22px rgba(49, 46, 129, 0.45);
+  }
+  .card.table.selected {
+    box-shadow:
+      0 0 0 2px var(--table-bg),
+      0 0 0 4px rgba(5, 150, 105, 0.88),
+      0 18px 40px -22px rgba(6, 78, 59, 0.45);
+  }
+  .card.annotation.selected {
+    box-shadow:
+      0 0 0 2px var(--amber-bg),
+      0 0 0 4px rgba(180, 83, 9, 0.82),
+      0 18px 40px -22px rgba(120, 53, 15, 0.45);
+  }
+
+  .card.link-source {
+    box-shadow:
+      0 0 0 2px var(--idea-bg),
+      0 0 0 5px var(--accent),
+      0 0 0 9px rgba(79, 70, 229, 0.16),
+      0 18px 40px -22px rgba(15, 23, 42, 0.5);
+  }
+  .card.table.link-source {
+    box-shadow:
+      0 0 0 2px var(--table-bg),
+      0 0 0 5px var(--accent),
+      0 0 0 9px rgba(79, 70, 229, 0.16),
+      0 18px 40px -22px rgba(15, 23, 42, 0.5);
+  }
+
+  .card.dragging {
+    z-index: 50;
+    box-shadow: 0 28px 60px -26px rgba(15, 23, 42, 0.58), 0 0 0 1px rgba(79, 70, 229, 0.16);
+  }
+  .card.dragging .card-grip { cursor: grabbing; }
+
+  .card-grip {
+    position: absolute;
+    top: 50%;
+    left: -28px;
+    z-index: 3;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 44px;
+    padding: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--idea-muted);
+    opacity: 0;
+    visibility: hidden;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: opacity 120ms ease, background-color 120ms ease, color 120ms ease;
+    transform: translateY(-50%);
+  }
+  .card-grip::after { content: ""; position: absolute; inset: -6px; }
+  .card-grip svg { width: 14px; height: 18px; pointer-events: none; }
+  .card-grip:hover { background: rgba(255, 255, 255, 0.78); color: var(--accent-strong); }
+  .card.annotation .card-grip { color: var(--amber); }
+  .card.annotation .card-grip:hover { background: rgba(255, 255, 255, 0.7); color: var(--amber-ink); }
+  .card.table .card-grip { color: var(--table-muted); }
+  .card.table .card-grip:hover { background: rgba(255, 255, 255, 0.7); color: var(--table-ink); }
+  .card:hover .card-grip,
+  .card.selected .card-grip,
+  .card:focus-within .card-grip { opacity: 1; visibility: visible; }
+
+  .card-delete {
+    position: absolute;
+    top: -15px;
+    right: -15px;
+    z-index: 4;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    border-radius: 999px;
+    background: #ffffff;
+    color: var(--muted);
+    box-shadow: 0 5px 14px -8px rgba(15, 23, 42, 0.45);
+    opacity: 0;
+    visibility: hidden;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background-color 120ms ease, color 120ms ease, opacity 120ms ease;
+  }
+  .card-delete::after { content: ""; position: absolute; inset: -7px; }
+  .card-delete svg { width: 14px; height: 14px; pointer-events: none; }
+  .card-delete:hover { background: var(--danger-soft); color: var(--danger); border-color: rgba(220, 38, 38, 0.3); }
+  .card.annotation .card-delete { color: var(--amber); }
+  .card.table .card-delete { color: var(--table-muted); }
+  .card.selected .card-delete,
+  .card:focus-within .card-delete { opacity: 1; visibility: visible; }
+
+  .card-text {
+    position: relative;
+    min-width: 56px;
+    min-height: 22px;
+    padding: 10px 14px 11px;
+    border-radius: 11px;
+    color: var(--idea-ink);
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    cursor: text;
+    outline: none;
+  }
+  .card.annotation .card-text { color: var(--amber-ink); }
+
+  .card-text.is-empty::before {
+    content: attr(data-placeholder);
+    color: var(--idea-muted);
+    font-weight: 400;
+    pointer-events: none;
+  }
+  .card.annotation .card-text.is-empty::before { color: #b98d48; }
+
+  .table-wrap {
+    width: 100%;
+    overflow: hidden;
+    border-radius: 11px;
+  }
+
+  .map-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: fixed;
+    color: var(--table-ink);
+  }
+
+  .map-table th,
+  .map-table td {
+    min-height: 34px;
+    padding: 8px 10px;
+    border-right: 1px solid var(--table-grid);
+    border-bottom: 1px solid var(--table-grid);
+    font-size: 14px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    vertical-align: top;
+    outline: none;
+  }
+  .map-table th {
+    background: var(--table-head);
+    color: var(--table-ink);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+  .map-table tr:last-child td { border-bottom: 0; }
+  .map-table th:last-child,
+  .map-table td:last-child { border-right: 0; }
+  .map-table th:focus-visible,
+  .map-table td:focus-visible {
+    background: rgba(255, 255, 255, 0.7);
+    outline: 2px solid rgba(5, 150, 105, 0.58);
+    outline-offset: -2px;
+  }
+
+  .table-tools {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 4px;
+    border: 1px solid var(--table-line);
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 12px 26px -16px rgba(6, 78, 59, 0.5);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateX(-50%);
+  }
+  .card.table.selected .table-tools,
+  .card.table:focus-within .table-tools {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+  .table-tools button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 34px;
+    padding: 0 6px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--table-muted);
+    font-size: 10.5px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background-color 120ms ease, color 120ms ease, opacity 120ms ease;
+  }
+  .table-tools button:hover { background: var(--table-bg); color: var(--table-ink); }
+  .table-tools button:disabled { opacity: 0.32; cursor: not-allowed; background: transparent; }
+
+  @media (pointer: coarse) {
+    .card-grip { left: -34px; width: 34px; height: 46px; }
+    .card-grip::after { inset: -5px; }
+    .card-delete { width: 34px; height: 34px; }
+    .card-delete::after { inset: -5px; }
+    .map-table th,
+    .map-table td { padding: 9px 10px; }
+    .table-tools button { min-width: 44px; height: 44px; }
+  }
+
+  #viewport.link-mode .card.block,
+  #viewport.link-mode .card.table,
+  #viewport.link-mode .card.block .card-text,
+  #viewport.link-mode .card.table .table-wrap,
+  #viewport.link-mode .card.table th,
+  #viewport.link-mode .card.table td { cursor: crosshair; }
+  #viewport.link-mode .card .card-text,
+  #viewport.link-mode .card.table .table-wrap,
+  #viewport.link-mode .card.table th,
+  #viewport.link-mode .card.table td { pointer-events: none; user-select: none; -webkit-user-select: none; }
+  #viewport.link-mode .card .card-delete,
+  #viewport.link-mode .card .card-grip,
+  #viewport.link-mode .card .table-tools { pointer-events: none; opacity: 0; visibility: hidden; }
+
+  @media (hover: hover) {
+    #viewport.link-mode .card.block:hover,
+    #viewport.link-mode .card.table:hover {
+      box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px rgba(79, 70, 229, 0.5), 0 18px 40px -22px rgba(15, 23, 42, 0.5);
+    }
+  }
+
+  /* ---------- Overlays ---------- */
+
+  #hint {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    z-index: 15;
+    transform: translateX(-50%);
+    max-width: calc(100% - 132px);
+    margin: 0;
+    padding: 7px 14px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.74);
+    -webkit-backdrop-filter: blur(9px);
+    backdrop-filter: blur(9px);
+    color: var(--muted);
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 1.2;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+    opacity: 0.92;
+    transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease;
+  }
+  #hint.active {
+    background: rgba(238, 242, 255, 0.95);
+    border-color: rgba(79, 70, 229, 0.26);
+    color: var(--accent-strong);
+    font-weight: 650;
+    opacity: 1;
+  }
+
+  #zoom-controls {
+    position: absolute;
+    right: calc(12px + env(safe-area-inset-right));
+    bottom: calc(86px + env(safe-area-inset-bottom));
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 6px;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.88);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    box-shadow: var(--shadow-soft);
+  }
+  #zoom-controls button {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background-color 120ms ease, color 120ms ease;
+  }
+  #zoom-controls button svg { width: 18px; height: 18px; }
+  #zoom-controls button:hover { background: #f1f5f9; color: var(--ink); }
+  #zoom-controls button:active { background: #e2e8f0; }
+  #zoom-controls .zoom-divider {
+    width: 26px;
+    height: 1px;
+    margin: 1px auto;
+    background: rgba(148, 163, 184, 0.28);
+  }
+
+  /* ---------- Toolbar ---------- */
+
+  #toolbar {
+    position: fixed;
+    left: 50%;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    max-width: calc(100vw - 20px);
+    padding: 6px;
+    border: 1px solid rgba(148, 163, 184, 0.26);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.9);
+    -webkit-backdrop-filter: blur(18px) saturate(145%);
+    backdrop-filter: blur(18px) saturate(145%);
+    box-shadow: var(--shadow-float), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    transform: translateX(-50%);
+  }
+  #toolbar button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-width: 56px;
+    min-height: 48px;
+    padding: 4px 9px;
+    border: 0;
+    border-radius: 11px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 10.5px;
+    font-weight: 650;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background-color 120ms ease, color 120ms ease, opacity 120ms ease;
+  }
+  #toolbar button svg { width: 20px; height: 20px; }
+  #toolbar button:hover { background: #f1f5f9; color: var(--ink); }
+  #toolbar button:active { background: #e2e8f0; }
+  #toolbar button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-strong); }
+  #toolbar button:disabled {
+    opacity: 0.34;
+    cursor: not-allowed;
+    background: transparent;
+    color: var(--muted);
+  }
+  #toolbar button[data-action="delete"]:not(:disabled):hover { background: var(--danger-soft); color: var(--danger); }
+
+  .toolbar-divider {
+    flex: 0 0 auto;
+    width: 1px;
+    height: 28px;
+    margin: 0 3px;
+    background: rgba(148, 163, 184, 0.3);
+  }
+
+  /* ---------- Toast ---------- */
+
+  #toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(92px + env(safe-area-inset-bottom));
+    z-index: 60;
+    max-width: calc(100vw - 32px);
+    padding: 11px 16px;
+    border-radius: 11px;
+    background: #0f172a;
+    color: #ffffff;
+    font-size: 13.5px;
+    font-weight: 550;
+    line-height: 1.35;
+    text-align: center;
+    box-shadow: 0 18px 40px -18px rgba(15, 23, 42, 0.7);
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, 10px);
+    transition: opacity 160ms ease, transform 160ms ease;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  #toast.error { background: #b91c1c; }
+  #toast.success { background: #1e293b; }
+
+  /* ---------- Dialog ---------- */
+
+  dialog {
+    width: min(420px, calc(100vw - 32px));
+    max-width: none;
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+    margin: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 18px;
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: 0 40px 90px -30px rgba(15, 23, 42, 0.65);
+    overflow: auto;
+  }
+  dialog::backdrop {
+    background: rgba(15, 23, 42, 0.42);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+  }
+  dialog[open] { animation: dialog-in 160ms ease-out; }
+  @keyframes dialog-in {
+    from { opacity: 0; transform: translateY(8px) scale(0.985); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .dialog-inner { padding: 26px 24px 22px; }
+  .dialog-inner h2 {
+    margin: 0 0 9px;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+  }
+  .dialog-inner p {
+    margin: 0 0 22px;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  .dialog-actions { display: flex; justify-content: flex-end; gap: 9px; }
+  .dialog-actions .btn { min-width: 88px; }
+
+  /* ---------- Focus ---------- */
+
+  button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* ---------- Responsive ---------- */
+
+  @media (max-width: 720px) {
+    #topbar {
+      height: calc(60px + env(safe-area-inset-top));
+      gap: 8px;
+      padding-top: env(safe-area-inset-top);
+      padding-left: calc(10px + env(safe-area-inset-left));
+      padding-right: calc(10px + env(safe-area-inset-right));
+    }
+    .brand-mark { width: 31px; height: 31px; border-radius: 9px; }
+    .brand-mark svg { width: 18px; height: 18px; }
+    #map-title { height: 44px; font-size: 16px; padding: 0 8px; }
+    .card-text { font-size: 16px; }
+    .topbar-actions { gap: 6px; }
+    #hint { max-width: calc(100% - 112px); font-size: 12px; padding: 6px 12px; }
+    #zoom-controls { right: calc(10px + env(safe-area-inset-right)); bottom: calc(84px + env(safe-area-inset-bottom)); }
+    #toolbar { bottom: calc(10px + env(safe-area-inset-bottom)); gap: 2px; padding: 5px; }
+    #toolbar button { min-width: 52px; min-height: 48px; padding: 4px 7px; }
+    #toast { bottom: calc(88px + env(safe-area-inset-bottom)); }
+  }
+
+  @media (max-width: 520px) {
+    .topbar-actions .btn { width: 44px; min-width: 44px; padding: 0; justify-content: center; }
+    .topbar-actions .btn-label { display: none; }
+    .topbar-actions .btn svg { width: 19px; height: 19px; }
+  }
+
+  @media (max-width: 380px) {
+    #toolbar button { min-width: 48px; font-size: 9.5px; padding: 4px 5px; }
+    #toolbar button svg { width: 19px; height: 19px; }
+    #hint { max-width: calc(100% - 96px); font-size: 11.5px; }
+    .toolbar-divider { margin: 0 1px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+        <circle cx="6" cy="6" r="2.4"></circle>
+        <circle cx="18" cy="7.5" r="2.2"></circle>
+        <circle cx="11.5" cy="18" r="2.4"></circle>
+        <path d="M8.3 6.5l7.5 0.7M7.1 8.1l3.4 7.6M16.8 9.5l-3.5 6.4"></path>
+      </svg>
+    </div>
+    <label class="sr-only" for="map-title">Map title</label>
+    <input id="map-title" type="text" placeholder="Untitled Mind Map" autocomplete="off" autocapitalize="sentences" spellcheck="false" aria-label="Map title">
+    <div class="topbar-actions">
+      <button id="new-map-btn" class="btn" type="button" aria-label="New map" title="New map">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M6 3.5h7l4 4V20.5H6z"></path>
+          <path d="M13 3.5v4h4"></path>
+          <path d="M11.5 11.5v5M9 14h5"></path>
+        </svg>
+        <span class="btn-label">New</span>
+      </button>
+      <button id="export-btn" class="btn primary" type="button" aria-label="Export map as PNG" title="Export map as PNG" data-busy="false" aria-busy="false">
+        <svg class="icon-export" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M12 3v11"></path>
+          <path d="m7.5 10.5 4.5 4.5 4.5-4.5"></path>
+          <path d="M5 20.5h14"></path>
+        </svg>
+        <span class="spinner" aria-hidden="true"></span>
+        <span class="btn-label" id="export-label">Export PNG</span>
+      </button>
+    </div>
+  </header>
+
+  <main id="viewport" aria-label="Mind map canvas">
+    <svg id="edge-layer" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse" markerUnits="strokeWidth">
+          <path d="M0,0 L10,5 L0,10 Z" fill="#4f46e5"></path>
+        </marker>
+        <marker id="arrowhead-selected" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse" markerUnits="strokeWidth">
+          <path d="M0,0 L10,5 L0,10 Z" fill="#312e81"></path>
+        </marker>
+      </defs>
+      <g id="edge-group"></g>
+    </svg>
+
+    <div id="world"></div>
+
+    <div id="hint" role="status" aria-live="polite">Drag to pan</div>
+
+    <div id="zoom-controls" role="group" aria-label="Canvas zoom controls">
+      <button type="button" data-zoom="in" aria-label="Zoom in" title="Zoom in">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false">
+          <path d="M12 5v14M5 12h14"></path>
+        </svg>
+      </button>
+      <button type="button" data-zoom="out" aria-label="Zoom out" title="Zoom out">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false">
+          <path d="M5 12h14"></path>
+        </svg>
+      </button>
+      <div class="zoom-divider" aria-hidden="true"></div>
+      <button type="button" data-zoom="fit" aria-label="Fit map to view" title="Fit map to view">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"></path>
+        </svg>
+      </button>
+    </div>
+  </main>
+
+  <nav id="toolbar" aria-label="Mind map tools">
+    <button type="button" data-action="add-block" aria-label="Add idea block" title="Add idea block">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+        <rect x="4" y="4" width="16" height="16" rx="3.2"></rect>
+        <path d="M12 8v8M8 12h8"></path>
+      </svg>
+      <span class="tool-label">Block</span>
+    </button>
+    <button type="button" data-action="add-note" aria-label="Add annotation note" title="Add annotation note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+        <path d="M5 4.5h9.5L19 9v10.5H5z"></path>
+        <path d="M14.5 4.5V9H19"></path>
+        <path d="M8.5 13h7M8.5 16.5h5"></path>
+      </svg>
+      <span class="tool-label">Note</span>
+    </button>
+    <button type="button" data-action="add-table" aria-label="Add table" title="Add table">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+        <rect x="3.5" y="4.5" width="17" height="15" rx="2.6"></rect>
+        <path d="M3.5 9.5h17M9 9.5v10M15 9.5v10"></path>
+      </svg>
+      <span class="tool-label">Table</span>
+    </button>
+    <button type="button" data-action="add-arrow" aria-label="Add arrow between cards" title="Add arrow between cards" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+        <path d="M4 12h15"></path>
+        <path d="m14 7 5 5-5 5"></path>
+      </svg>
+      <span class="tool-label">Add arrow</span>
+    </button>
+    <span class="toolbar-divider" aria-hidden="true"></span>
+    <button type="button" data-action="delete" id="delete-btn" aria-label="Delete selected item" title="Delete selected item" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+        <path d="M4 7h16"></path>
+        <path d="M9 7V4.5h6V7"></path>
+        <path d="M6.5 7l1 13h9l1-13"></path>
+        <path d="M10 11v5M14 11v5"></path>
+      </svg>
+      <span class="tool-label">Delete</span>
+    </button>
+  </nav>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <dialog id="new-map-dialog" aria-labelledby="new-map-dialog-title" aria-describedby="new-map-dialog-desc">
+    <div class="dialog-inner">
+      <h2 id="new-map-dialog-title">Start a new map?</h2>
+      <p id="new-map-dialog-desc">This clears the current title, ideas, notes, and arrows. It can't be undone.</p>
+      <form method="dialog" class="dialog-actions">
+        <button type="submit" value="cancel" class="btn">Cancel</button>
+        <button type="submit" value="confirm" class="btn danger" id="confirm-new-btn">Reset map</button>
+      </form>
+    </div>
+  </dialog>
+</div>
+<script>
+(function () {
+  "use strict";
+
+  const SCHEMA_VERSION = 2;
+  const STORAGE_KEY = "mindmap.document.v1";
+  const SAVE_DELAY = 300;
+  const CARD_FALLBACK_WIDTH = 160;
+  const CARD_FALLBACK_HEIGHT = 52;
+  const TABLE_MIN_ROWS = 2;
+  const TABLE_MIN_COLS = 1;
+  const TABLE_MIN_WIDTH = 240;
+  const TABLE_COL_WIDTH = 120;
+  const GRID_SIZE = 26;
+  const MIN_SCALE = 0.2;
+  const MAX_SCALE = 2.5;
+  const FONT_STACK = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+
+  const dom = {
+    app: document.getElementById("app"),
+    topbar: document.getElementById("topbar"),
+    title: document.getElementById("map-title"),
+    newBtn: document.getElementById("new-map-btn"),
+    exportBtn: document.getElementById("export-btn"),
+    exportLabel: document.getElementById("export-label"),
+    viewport: document.getElementById("viewport"),
+    world: document.getElementById("world"),
+    edgeLayer: document.getElementById("edge-layer"),
+    edgeGroup: document.getElementById("edge-group"),
+    hint: document.getElementById("hint"),
+    zoomIn: document.querySelector('[data-zoom="in"]'),
+    zoomOut: document.querySelector('[data-zoom="out"]'),
+    zoomFit: document.querySelector('[data-zoom="fit"]'),
+    toolbar: document.getElementById("toolbar"),
+    addBlockBtn: document.querySelector('[data-action="add-block"]'),
+    addNoteBtn: document.querySelector('[data-action="add-note"]'),
+    addTableBtn: document.querySelector('[data-action="add-table"]'),
+    addArrowBtn: document.querySelector('[data-action="add-arrow"]'),
+    deleteBtn: document.getElementById("delete-btn"),
+    toast: document.getElementById("toast"),
+    dialog: document.getElementById("new-map-dialog")
+  };
+
+  const ui = {
+    selectedId: null,
+    selectedType: null,
+    mode: "normal",
+    linkSourceId: null,
+    isExporting: false
+  };
+
+  let doc = null;
+  let cardEls = new Map();
+  let cardTextEls = new Map();
+  let saveTimer = 0;
+  let storageWarningShown = false;
+  let edgeFrame = 0;
+  let toastTimer = 0;
+  let dragState = null;
+  let panGesture = null;
+  let pointers = new Map();
+  const touchPoints = new Map();
+  let touchPinch = null;
+
+  function prefersTouchHints() {
+    if (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) return true;
+    return navigator.maxTouchPoints > 0 && window.innerWidth <= 720;
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function uid() {
+    if (window.crypto && typeof window.crypto.randomUUID === "function") {
+      return window.crypto.randomUUID();
+    }
+    return "id-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 11);
+  }
+
+  function makeStarterDocument() {
+    return {
+      version: SCHEMA_VERSION,
+      title: "",
+      blocks: [{ id: uid(), x: 0, y: 0, text: "Central Idea" }],
+      tables: [],
+      annotations: [],
+      edges: [],
+      viewport: { x: 0, y: 0, scale: 1 }
+    };
+  }
+
+  function nodeById(id) {
+    for (let i = 0; i < doc.blocks.length; i += 1) {
+      if (doc.blocks[i].id === id) return doc.blocks[i];
+    }
+    for (let i = 0; i < doc.tables.length; i += 1) {
+      if (doc.tables[i].id === id) return doc.tables[i];
+    }
+    return null;
+  }
+
+  function findItem(id, kind) {
+    const list = kind === "block"
+      ? doc.blocks
+      : kind === "table"
+        ? doc.tables
+        : doc.annotations;
+    for (let i = 0; i < list.length; i += 1) {
+      if (list[i].id === id) return list[i];
+    }
+    return null;
+  }
+
+  function hasContent() {
+    return doc.blocks.length + doc.tables.length + doc.annotations.length > 0;
+  }
+
+  function readEditableText(el) {
+    return el.innerText.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  }
+
+  function syncPlaceholder(el) {
+    el.classList.toggle("is-empty", !el.innerText.trim());
+  }
+
+  function setTransform(el, x, y) {
+    el.style.transform = "translate3d(" + x + "px, " + y + "px, 0)";
+  }
+
+  function cardWorldSize(el) {
+    const rect = el.getBoundingClientRect();
+    const scale = doc.viewport.scale || 1;
+    return {
+      w: rect.width / scale,
+      h: rect.height / scale
+    };
+  }
+
+  function showToast(message, kind) {
+    dom.toast.textContent = message;
+    dom.toast.classList.remove("error", "success");
+    if (kind === "error") dom.toast.classList.add("error");
+    if (kind === "success") dom.toast.classList.add("success");
+    dom.toast.classList.add("show");
+    window.clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(function () {
+      dom.toast.classList.remove("show");
+    }, 3200);
+  }
+
+  function isEditableTarget(target) {
+    if (!target || !(target instanceof Element)) return false;
+    return !!target.closest('input, textarea, select, [contenteditable="true"], [contenteditable="plaintext-only"]');
+  }
+
+  /* ---------- Persistence ---------- */
+
+  function normalizeTableRows(rawRows) {
+    const rows = [];
+    let columns = 0;
+
+    if (Array.isArray(rawRows)) {
+      for (let r = 0; r < rawRows.length; r += 1) {
+        const rawRow = rawRows[r];
+        if (!Array.isArray(rawRow)) continue;
+        const row = [];
+        for (let c = 0; c < rawRow.length; c += 1) {
+          row.push(typeof rawRow[c] === "string" ? rawRow[c] : "");
+        }
+        columns = Math.max(columns, row.length);
+        rows.push(row);
+      }
+    }
+
+    while (rows.length < TABLE_MIN_ROWS) rows.push([]);
+    columns = Math.max(TABLE_MIN_COLS, columns);
+    for (let r = 0; r < rows.length; r += 1) {
+      while (rows[r].length < columns) rows[r].push("");
+    }
+    return rows;
+  }
+
+  function sanitizeDocument(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    if (raw.version !== 1 && raw.version !== SCHEMA_VERSION) return null;
+    if (!Array.isArray(raw.blocks) || !Array.isArray(raw.annotations) || !Array.isArray(raw.edges)) return null;
+
+    const seenIds = new Set();
+    const blocks = [];
+
+    for (let i = 0; i < raw.blocks.length; i += 1) {
+      const item = raw.blocks[i];
+      if (!item || typeof item !== "object") continue;
+      if (typeof item.id !== "string" || item.id.length === 0 || seenIds.has(item.id)) continue;
+      if (!Number.isFinite(item.x) || !Number.isFinite(item.y)) continue;
+      if (Math.abs(item.x) > 10000000 || Math.abs(item.y) > 10000000) continue;
+      seenIds.add(item.id);
+      blocks.push({
+        id: item.id,
+        x: item.x,
+        y: item.y,
+        text: typeof item.text === "string" ? item.text : ""
+      });
+    }
+
+    const tables = [];
+    const rawTables = Array.isArray(raw.tables) ? raw.tables : [];
+    for (let i = 0; i < rawTables.length; i += 1) {
+      const item = rawTables[i];
+      if (!item || typeof item !== "object") continue;
+      if (typeof item.id !== "string" || item.id.length === 0 || seenIds.has(item.id)) continue;
+      if (!Number.isFinite(item.x) || !Number.isFinite(item.y)) continue;
+      if (Math.abs(item.x) > 10000000 || Math.abs(item.y) > 10000000) continue;
+      seenIds.add(item.id);
+      tables.push({
+        id: item.id,
+        x: item.x,
+        y: item.y,
+        rows: normalizeTableRows(item.rows)
+      });
+    }
+
+    const annotations = [];
+    for (let i = 0; i < raw.annotations.length; i += 1) {
+      const item = raw.annotations[i];
+      if (!item || typeof item !== "object") continue;
+      if (typeof item.id !== "string" || item.id.length === 0 || seenIds.has(item.id)) continue;
+      if (!Number.isFinite(item.x) || !Number.isFinite(item.y)) continue;
+      if (Math.abs(item.x) > 10000000 || Math.abs(item.y) > 10000000) continue;
+      seenIds.add(item.id);
+      annotations.push({
+        id: item.id,
+        x: item.x,
+        y: item.y,
+        text: typeof item.text === "string" ? item.text : ""
+      });
+    }
+
+    const nodeIds = new Set();
+    for (let i = 0; i < blocks.length; i += 1) nodeIds.add(blocks[i].id);
+    for (let i = 0; i < tables.length; i += 1) nodeIds.add(tables[i].id);
+
+    const edgeIds = new Set();
+    const pairs = new Set();
+    const edges = [];
+
+    for (let i = 0; i < raw.edges.length; i += 1) {
+      const edge = raw.edges[i];
+      if (!edge || typeof edge !== "object") continue;
+      if (typeof edge.from !== "string" || typeof edge.to !== "string") continue;
+      if (!nodeIds.has(edge.from) || !nodeIds.has(edge.to) || edge.from === edge.to) continue;
+      const pair = [edge.from, edge.to].sort().join("|");
+      if (pairs.has(pair)) continue;
+      let edgeId = typeof edge.id === "string" && edge.id.length > 0 && !edgeIds.has(edge.id) ? edge.id : uid();
+      edgeIds.add(edgeId);
+      pairs.add(pair);
+      edges.push({ id: edgeId, from: edge.from, to: edge.to });
+    }
+
+    let viewport = { x: 0, y: 0, scale: 1 };
+    let needsFit = false;
+    const vp = raw.viewport;
+    if (vp && typeof vp === "object" && Number.isFinite(vp.x) && Number.isFinite(vp.y) && Number.isFinite(vp.scale) && Math.abs(vp.x) < 1000000000 && Math.abs(vp.y) < 1000000000) {
+      viewport = {
+        x: vp.x,
+        y: vp.y,
+        scale: clamp(vp.scale, MIN_SCALE, MAX_SCALE)
+      };
+    } else {
+      needsFit = true;
+    }
+
+    return {
+      needsFit: needsFit,
+      doc: {
+        version: SCHEMA_VERSION,
+        title: typeof raw.title === "string" ? raw.title : "",
+        blocks: blocks,
+        tables: tables,
+        annotations: annotations,
+        edges: edges,
+        viewport: viewport
+      }
+    };
+  }
+
+  function loadDocument() {
+    let raw = null;
+    try {
+      raw = window.localStorage.getItem(STORAGE_KEY);
+    } catch (err) {
+      return null;
+    }
+    if (!raw) return null;
+    let parsed = null;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (err) {
+      return null;
+    }
+    return sanitizeDocument(parsed);
+  }
+
+  function serializeDocument() {
+    return {
+      version: SCHEMA_VERSION,
+      title: doc.title,
+      blocks: doc.blocks.map(function (b) {
+        return { id: b.id, x: b.x, y: b.y, text: b.text };
+      }),
+      tables: doc.tables.map(function (t) {
+        return {
+          id: t.id,
+          x: t.x,
+          y: t.y,
+          rows: t.rows.map(function (row) { return row.slice(); })
+        };
+      }),
+      annotations: doc.annotations.map(function (a) {
+        return { id: a.id, x: a.x, y: a.y, text: a.text };
+      }),
+      edges: doc.edges.map(function (e) {
+        return { id: e.id, from: e.from, to: e.to };
+      }),
+      viewport: {
+        x: doc.viewport.x,
+        y: doc.viewport.y,
+        scale: doc.viewport.scale
+      }
+    };
+  }
+
+  function saveNow() {
+    if (saveTimer) {
+      window.clearTimeout(saveTimer);
+      saveTimer = 0;
+    }
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeDocument()));
+    } catch (err) {
+      if (!storageWarningShown) {
+        storageWarningShown = true;
+        showToast("Autosave is unavailable in this browser.", "error");
+      }
+    }
+  }
+
+  function scheduleSave() {
+    if (saveTimer) window.clearTimeout(saveTimer);
+    saveTimer = window.setTimeout(saveNow, SAVE_DELAY);
+  }
+
+  function flushSave() {
+    if (saveTimer) saveNow();
+  }
+
+  /* ---------- Viewport ---------- */
+
+  function applyViewport() {
+    const vp = doc.viewport;
+    dom.world.style.transform = "translate(" + vp.x + "px, " + vp.y + "px) scale(" + vp.scale + ")";
+    const size = GRID_SIZE * vp.scale;
+    dom.viewport.style.backgroundSize = size + "px " + size + "px";
+    dom.viewport.style.backgroundPosition = vp.x + "px " + vp.y + "px";
+    scheduleEdgeDraw();
+    scheduleSave();
+  }
+
+  function zoomAt(nextScale, clientX, clientY) {
+    const scale = clamp(nextScale, MIN_SCALE, MAX_SCALE);
+    if (scale === doc.viewport.scale) return;
+    const rect = dom.viewport.getBoundingClientRect();
+    const px = clientX - rect.left;
+    const py = clientY - rect.top;
+    const worldX = (px - doc.viewport.x) / doc.viewport.scale;
+    const worldY = (py - doc.viewport.y) / doc.viewport.scale;
+    doc.viewport.scale = scale;
+    doc.viewport.x = px - worldX * scale;
+    doc.viewport.y = py - worldY * scale;
+    applyViewport();
+    scheduleSave();
+  }
+
+  function zoomBy(factor) {
+    const rect = dom.viewport.getBoundingClientRect();
+    zoomAt(doc.viewport.scale * factor, rect.left + rect.width / 2, rect.top + rect.height / 2);
+  }
+
+  function fitToContent() {
+    const vw = dom.viewport.clientWidth;
+    const vh = dom.viewport.clientHeight;
+    const items = [];
+    for (let i = 0; i < doc.blocks.length; i += 1) items.push({ item: doc.blocks[i], kind: "block" });
+    for (let i = 0; i < doc.tables.length; i += 1) items.push({ item: doc.tables[i], kind: "table" });
+    for (let i = 0; i < doc.annotations.length; i += 1) items.push({ item: doc.annotations[i], kind: "annotation" });
+
+    if (items.length === 0) {
+      doc.viewport = { x: vw / 2, y: vh / 2, scale: 1 };
+      applyViewport();
+      scheduleSave();
+      return;
+    }
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (let i = 0; i < items.length; i += 1) {
+      const entry = items[i];
+      const el = cardEls.get(entry.item.id);
+      const size = el ? cardWorldSize(el) : { w: CARD_FALLBACK_WIDTH, h: CARD_FALLBACK_HEIGHT };
+      const w = size.w;
+      const h = size.h;
+      minX = Math.min(minX, entry.item.x);
+      minY = Math.min(minY, entry.item.y);
+      maxX = Math.max(maxX, entry.item.x + w);
+      maxY = Math.max(maxY, entry.item.y + h);
+    }
+
+    const safeTop = 72;
+    const safeBottom = ui.selectedType === "table" ? 176 : 108;
+    const usableW = Math.max(80, vw - 144);
+    const usableH = Math.max(80, vh - safeTop - safeBottom);
+    const contentW = Math.max(1, maxX - minX);
+    const contentH = Math.max(1, maxY - minY);
+    let scale = Math.min(usableW / contentW, usableH / contentH, 1.5);
+    scale = clamp(scale, MIN_SCALE, MAX_SCALE);
+
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    doc.viewport.scale = scale;
+    doc.viewport.x = vw / 2 - centerX * scale;
+    doc.viewport.y = (safeTop + (vh - safeBottom)) / 2 - centerY * scale;
+    applyViewport();
+    scheduleSave();
+  }
+
+  function centerStarter() {
+    const vw = dom.viewport.clientWidth;
+    const vh = dom.viewport.clientHeight;
+    doc.viewport.scale = 1;
+    const first = doc.blocks[0];
+    const el = first ? cardEls.get(first.id) : null;
+    if (first && el) {
+      doc.viewport.x = vw / 2 - (first.x + el.offsetWidth / 2);
+      doc.viewport.y = (vh - 34) / 2 - (first.y + el.offsetHeight / 2);
+    } else {
+      doc.viewport.x = vw / 2;
+      doc.viewport.y = vh / 2;
+    }
+    applyViewport();
+  }
+
+  /* ---------- Cards ---------- */
+
+  const GRIP_SVG = '<svg viewBox="0 0 12 12" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="3" cy="2.5" r="1.1"></circle><circle cx="9" cy="2.5" r="1.1"></circle><circle cx="3" cy="6" r="1.1"></circle><circle cx="9" cy="6" r="1.1"></circle><circle cx="3" cy="9.5" r="1.1"></circle><circle cx="9" cy="9.5" r="1.1"></circle></svg>';
+  const TRASH_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16"></path><path d="M9 7V4.5h6V7"></path><path d="M6.5 7l1 13h9l1-13"></path><path d="M10 11v5M14 11v5"></path></svg>';
+
+  function kindLabel(kind) {
+    if (kind === "block") return "idea";
+    if (kind === "table") return "table";
+    return "note";
+  }
+
+  function makeCardGrip(kind) {
+    const grip = document.createElement("span");
+    grip.className = "card-grip";
+    grip.setAttribute("aria-hidden", "true");
+    grip.setAttribute("title", "Drag " + kindLabel(kind));
+    grip.innerHTML = GRIP_SVG;
+    return grip;
+  }
+
+  function makeCardDeleteButton(kind) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "card-delete";
+    button.setAttribute("aria-label", "Delete " + kindLabel(kind));
+    button.innerHTML = TRASH_SVG;
+    return button;
+  }
+
+  function defaultTableRows() {
+    return [
+      ["Column 1", "Column 2", "Column 3"],
+      ["", "", ""],
+      ["", "", ""]
+    ];
+  }
+
+  function tableColumnCount(item) {
+    return item.rows[0] && item.rows[0].length ? item.rows[0].length : 1;
+  }
+
+  function tablePreferredWidth(item) {
+    return Math.max(TABLE_MIN_WIDTH, tableColumnCount(item) * TABLE_COL_WIDTH);
+  }
+
+  function createCardEl(item, kind) {
+    const isBlock = kind === "block";
+    const el = document.createElement("article");
+    el.className = "card " + kind;
+    el.dataset.id = item.id;
+    el.dataset.kind = kind;
+    el.setAttribute("aria-label", isBlock ? "Idea block" : "Annotation note");
+    setTransform(el, item.x, item.y);
+
+    const grip = makeCardGrip(kind);
+    const deleteButton = makeCardDeleteButton(kind);
+
+    const text = document.createElement("div");
+    text.className = "card-text";
+    text.contentEditable = "true";
+    text.setAttribute("role", "textbox");
+    text.setAttribute("aria-multiline", "true");
+    text.setAttribute("aria-label", isBlock ? "Idea text" : "Note text");
+    text.setAttribute("data-placeholder", isBlock ? "New idea" : "Add your note here");
+    text.setAttribute("aria-placeholder", isBlock ? "New idea" : "Add your note here");
+    text.spellcheck = true;
+    text.textContent = item.text;
+    text.classList.toggle("is-empty", !item.text.trim());
+
+    el.appendChild(grip);
+    el.appendChild(deleteButton);
+    el.appendChild(text);
+
+    el.addEventListener("pointerdown", onCardPointerDown);
+    el.addEventListener("focusin", onCardFocusIn);
+    text.addEventListener("input", onCardTextInput);
+    text.addEventListener("paste", onCardPaste);
+    text.addEventListener("beforeinput", function (event) {
+      if ((event.inputType || "").indexOf("format") === 0) event.preventDefault();
+    });
+    deleteButton.addEventListener("click", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      deleteItem(idOfCard(el), kind);
+    });
+
+    return el;
+  }
+
+  function idOfCard(el) {
+    return el.dataset.id;
+  }
+
+  function renderTableInto(item, table) {
+    table.textContent = "";
+    const thead = document.createElement("thead");
+    const tbody = document.createElement("tbody");
+    const headerRow = document.createElement("tr");
+
+    for (let c = 0; c < item.rows[0].length; c += 1) {
+      const th = document.createElement("th");
+      th.scope = "col";
+      th.contentEditable = "true";
+      th.spellcheck = true;
+      th.dataset.row = "0";
+      th.dataset.col = String(c);
+      th.textContent = item.rows[0][c] || "";
+      headerRow.appendChild(th);
+    }
+    thead.appendChild(headerRow);
+
+    for (let r = 1; r < item.rows.length; r += 1) {
+      const tr = document.createElement("tr");
+      for (let c = 0; c < item.rows[r].length; c += 1) {
+        const td = document.createElement("td");
+        td.contentEditable = "true";
+        td.spellcheck = true;
+        td.dataset.row = String(r);
+        td.dataset.col = String(c);
+        td.textContent = item.rows[r][c] || "";
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+
+    table.appendChild(thead);
+    table.appendChild(tbody);
+  }
+
+  function createTableTools() {
+    const tools = document.createElement("div");
+    tools.className = "table-tools";
+    tools.setAttribute("role", "group");
+    tools.setAttribute("aria-label", "Table controls");
+
+    const actions = [
+      { action: "add-row", label: "+ Row", aria: "Add row" },
+      { action: "add-col", label: "+ Col", aria: "Add column" },
+      { action: "remove-row", label: "\u2212 Row", aria: "Remove row" },
+      { action: "remove-col", label: "\u2212 Col", aria: "Remove column" }
+    ];
+
+    for (let i = 0; i < actions.length; i += 1) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.tableAction = actions[i].action;
+      button.setAttribute("aria-label", actions[i].aria);
+      button.title = actions[i].aria;
+      button.textContent = actions[i].label;
+      tools.appendChild(button);
+    }
+    return tools;
+  }
+
+  function refreshTableTools(card, item) {
+    const removeRow = card.querySelector('[data-table-action="remove-row"]');
+    const removeCol = card.querySelector('[data-table-action="remove-col"]');
+    if (removeRow) removeRow.disabled = item.rows.length <= TABLE_MIN_ROWS;
+    if (removeCol) removeCol.disabled = tableColumnCount(item) <= TABLE_MIN_COLS;
+  }
+
+  function focusTableCell(card, row, column, selectText) {
+    const cell = card.querySelector('[data-row="' + row + '"][data-col="' + column + '"]');
+    if (!cell) return;
+    cell.focus({ preventScroll: true });
+    if (!selectText) return;
+    const range = document.createRange();
+    const selection = window.getSelection();
+    if (!selection) return;
+    range.selectNodeContents(cell);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  function onTableCellInput(event) {
+    const cell = event.target.closest("th, td");
+    if (!cell) return;
+    const card = cell.closest(".card.table");
+    if (!card) return;
+    const item = findItem(card.dataset.id, "table");
+    if (!item) return;
+    const row = Number(cell.dataset.row);
+    const column = Number(cell.dataset.col);
+    if (!item.rows[row]) return;
+    item.rows[row][column] = readEditableText(cell);
+    scheduleEdgeDraw();
+    scheduleSave();
+  }
+
+  function onTableCellPaste(event) {
+    const cell = event.target.closest("th, td");
+    if (!cell) return;
+    const clipboard = event.clipboardData || window.clipboardData;
+    if (!clipboard) return;
+    const text = clipboard.getData("text/plain");
+    if (typeof text !== "string") return;
+    event.preventDefault();
+    insertPlainText(cell, text);
+    cell.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  function onTableCellBeforeInput(event) {
+    if ((event.inputType || "").indexOf("format") === 0) event.preventDefault();
+  }
+
+  function onTableCellKeyDown(event) {
+    if (event.key !== "Tab" || event.altKey || event.ctrlKey || event.metaKey) return;
+    const cell = event.target.closest("th, td");
+    if (!cell) return;
+    const table = cell.closest("table");
+    if (!table) return;
+    const cells = Array.prototype.slice.call(table.querySelectorAll("th, td"));
+    const index = cells.indexOf(cell);
+    if (index < 0) return;
+    event.preventDefault();
+    const next = event.shiftKey
+      ? (index - 1 + cells.length) % cells.length
+      : (index + 1) % cells.length;
+    cells[next].focus({ preventScroll: true });
+  }
+
+  function onTableToolsClick(event) {
+    const button = event.target.closest("[data-table-action]");
+    if (!button) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const card = button.closest(".card.table");
+    if (!card) return;
+    const item = findItem(card.dataset.id, "table");
+    if (!item) return;
+    const action = button.dataset.tableAction;
+    let focusRow = 0;
+    let focusCol = 0;
+    let selectText = false;
+
+    if (action === "add-row") {
+      const columns = tableColumnCount(item);
+      item.rows.push(new Array(columns).fill(""));
+      focusRow = item.rows.length - 1;
+    } else if (action === "add-col") {
+      const columns = tableColumnCount(item);
+      for (let r = 0; r < item.rows.length; r += 1) {
+        item.rows[r].push(r === 0 ? "Column " + (columns + 1) : "");
+      }
+      focusCol = columns;
+      selectText = true;
+    } else if (action === "remove-row") {
+      if (item.rows.length <= TABLE_MIN_ROWS) return;
+      item.rows.pop();
+      focusRow = item.rows.length - 1;
+    } else if (action === "remove-col") {
+      const columns = tableColumnCount(item);
+      if (columns <= TABLE_MIN_COLS) return;
+      for (let r = 0; r < item.rows.length; r += 1) item.rows[r].pop();
+      focusCol = columns - 2;
+    } else {
+      return;
+    }
+
+    card.style.width = tablePreferredWidth(item) + "px";
+    const table = card.querySelector(".map-table");
+    if (table) renderTableInto(item, table);
+    refreshTableTools(card, item);
+    setSelection(card.dataset.id, "table");
+    revealCard(item);
+    scheduleEdgeDraw();
+    scheduleSave();
+    window.requestAnimationFrame(function () {
+      focusTableCell(card, focusRow, Math.max(0, focusCol), selectText);
+    });
+  }
+
+  function createTableEl(item) {
+    const el = document.createElement("article");
+    el.className = "card table";
+    el.dataset.id = item.id;
+    el.dataset.kind = "table";
+    el.setAttribute("aria-label", "Editable table");
+    el.style.width = tablePreferredWidth(item) + "px";
+    setTransform(el, item.x, item.y);
+
+    const grip = makeCardGrip("table");
+    const deleteButton = makeCardDeleteButton("table");
+    const wrap = document.createElement("div");
+    wrap.className = "table-wrap";
+    const table = document.createElement("table");
+    table.className = "map-table";
+    table.setAttribute("aria-label", "Table content");
+    renderTableInto(item, table);
+    wrap.appendChild(table);
+    const tools = createTableTools();
+
+    el.appendChild(grip);
+    el.appendChild(deleteButton);
+    el.appendChild(wrap);
+    el.appendChild(tools);
+    refreshTableTools(el, item);
+
+    el.addEventListener("pointerdown", onCardPointerDown);
+    el.addEventListener("focusin", onCardFocusIn);
+    table.addEventListener("input", onTableCellInput);
+    table.addEventListener("paste", onTableCellPaste);
+    table.addEventListener("beforeinput", onTableCellBeforeInput);
+    table.addEventListener("keydown", onTableCellKeyDown);
+    tools.addEventListener("click", onTableToolsClick);
+    deleteButton.addEventListener("click", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      deleteItem(idOfCard(el), "table");
+    });
+
+    return el;
+  }
+
+  function renderAllCards() {
+    dom.world.textContent = "";
+    cardEls = new Map();
+    cardTextEls = new Map();
+
+    for (let i = 0; i < doc.blocks.length; i += 1) {
+      const item = doc.blocks[i];
+      const el = createCardEl(item, "block");
+      dom.world.appendChild(el);
+      cardEls.set(item.id, el);
+      cardTextEls.set(item.id, el.querySelector(".card-text"));
+    }
+    for (let i = 0; i < doc.tables.length; i += 1) {
+      const item = doc.tables[i];
+      const el = createTableEl(item);
+      dom.world.appendChild(el);
+      cardEls.set(item.id, el);
+    }
+    for (let i = 0; i < doc.annotations.length; i += 1) {
+      const item = doc.annotations[i];
+      const el = createCardEl(item, "annotation");
+      dom.world.appendChild(el);
+      cardEls.set(item.id, el);
+      cardTextEls.set(item.id, el.querySelector(".card-text"));
+    }
+  }
+
+  /* ---------- Selection and UI state ---------- */
+
+  function updateToolbar() {
+    dom.addArrowBtn.setAttribute("aria-pressed", ui.mode === "link" ? "true" : "false");
+    dom.viewport.classList.toggle("link-mode", ui.mode === "link");
+    dom.deleteBtn.disabled = !ui.selectedId;
+
+    let label = "Delete selected item";
+    if (ui.selectedType === "block") label = "Delete selected block";
+    else if (ui.selectedType === "table") label = "Delete selected table";
+    else if (ui.selectedType === "annotation") label = "Delete selected note";
+    else if (ui.selectedType === "edge") label = "Delete selected arrow";
+    dom.deleteBtn.setAttribute("aria-label", label);
+    dom.deleteBtn.title = label;
+  }
+
+  function updateHint() {
+    if (ui.mode === "link") {
+      dom.hint.textContent = ui.linkSourceId ? "Now tap the target card." : "Tap an idea or table to start the arrow.";
+      dom.hint.classList.add("active");
+    } else {
+      dom.hint.textContent = prefersTouchHints() ? "Drag to pan · Pinch to zoom" : "Drag to pan · Ctrl/⌘ + scroll to zoom";
+      dom.hint.classList.remove("active");
+    }
+  }
+
+  function setSelection(id, type) {
+    if (ui.selectedId) {
+      const previous = cardEls.get(ui.selectedId);
+      if (previous) previous.classList.remove("selected");
+    }
+    ui.selectedId = id || null;
+    ui.selectedType = id ? type : null;
+    if (ui.selectedId && ui.selectedType !== "edge") {
+      const el = cardEls.get(ui.selectedId);
+      if (el) el.classList.add("selected");
+    }
+
+    const active = document.activeElement;
+    const selectedEl = ui.selectedId && ui.selectedType !== "edge"
+      ? cardEls.get(ui.selectedId)
+      : null;
+    if (
+      active &&
+      active !== document.body &&
+      (active.tagName === "INPUT" || active.isContentEditable) &&
+      (!selectedEl || !selectedEl.contains(active))
+    ) {
+      active.blur();
+    }
+
+    updateToolbar();
+    scheduleEdgeDraw();
+  }
+
+  function clearSelection() {
+    setSelection(null, null);
+  }
+
+  function onCardFocusIn(event) {
+    if (ui.mode === "link") return;
+    const card = event.currentTarget;
+    if (ui.selectedId !== card.dataset.id || ui.selectedType !== card.dataset.kind) {
+      setSelection(card.dataset.id, card.dataset.kind);
+    }
+  }
+
+  function setLinkSource(id) {
+    if (ui.linkSourceId) {
+      const previous = cardEls.get(ui.linkSourceId);
+      if (previous) previous.classList.remove("link-source");
+    }
+    ui.linkSourceId = id || null;
+    if (ui.linkSourceId) {
+      const el = cardEls.get(ui.linkSourceId);
+      if (el) el.classList.add("link-source");
+    }
+    updateHint();
+  }
+
+  /* ---------- Arrow rendering ---------- */
+
+  const SVG_NS = "http://www.w3.org/2000/svg";
+
+  function requestEdgeDraw() {
+    if (!edgeFrame) edgeFrame = window.requestAnimationFrame(drawEdges);
+  }
+
+  const scheduleEdgeDraw = requestEdgeDraw;
+
+  function anchoredPoint(cx, cy, w, h, tx, ty, gap) {
+    const dx = tx - cx;
+    const dy = ty - cy;
+    const distance = Math.hypot(dx, dy);
+    if (distance < 0.001) return null;
+    const ux = dx / distance;
+    const uy = dy / distance;
+    const halfW = w / 2;
+    const halfH = h / 2;
+    const xDistance = Math.abs(ux) > 0.000001 ? halfW / Math.abs(ux) : Infinity;
+    const yDistance = Math.abs(uy) > 0.000001 ? halfH / Math.abs(uy) : Infinity;
+    const edgeDistance = Math.min(xDistance, yDistance);
+    return {
+      x: cx + ux * (edgeDistance + gap),
+      y: cy + uy * (edgeDistance + gap)
+    };
+  }
+
+  function curveControls(a, b) {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    if (Math.abs(dx) >= Math.abs(dy)) {
+      const amount = dx * 0.45;
+      return {
+        c1: { x: a.x + amount, y: a.y },
+        c2: { x: b.x - amount, y: b.y }
+      };
+    }
+    const amount = dy * 0.45;
+    return {
+      c1: { x: a.x, y: a.y + amount },
+      c2: { x: b.x, y: b.y - amount }
+    };
+  }
+
+  function drawEdges() {
+    edgeFrame = 0;
+    while (dom.edgeGroup.firstChild) dom.edgeGroup.removeChild(dom.edgeGroup.firstChild);
+
+    const scale = doc.viewport.scale;
+    const panX = doc.viewport.x;
+    const panY = doc.viewport.y;
+    const dimensions = new Map();
+
+    for (let i = 0; i < doc.blocks.length; i += 1) {
+      const block = doc.blocks[i];
+      const el = cardEls.get(block.id);
+      if (el) dimensions.set(block.id, cardWorldSize(el));
+    }
+    for (let i = 0; i < doc.tables.length; i += 1) {
+      const table = doc.tables[i];
+      const el = cardEls.get(table.id);
+      if (el) dimensions.set(table.id, cardWorldSize(el));
+    }
+
+    for (let i = 0; i < doc.edges.length; i += 1) {
+      const edge = doc.edges[i];
+      const from = nodeById(edge.from);
+      const to = nodeById(edge.to);
+      if (!from || !to) continue;
+      const fromSize = dimensions.get(edge.from);
+      const toSize = dimensions.get(edge.to);
+      if (!fromSize || !toSize) continue;
+
+      const fromX = (from.x + fromSize.w / 2) * scale + panX;
+      const fromY = (from.y + fromSize.h / 2) * scale + panY;
+      const toX = (to.x + toSize.w / 2) * scale + panX;
+      const toY = (to.y + toSize.h / 2) * scale + panY;
+      const edgeGap = Math.max(1.5, scale * 4);
+
+      const start = anchoredPoint(fromX, fromY, fromSize.w * scale, fromSize.h * scale, toX, toY, edgeGap);
+      const end = anchoredPoint(toX, toY, toSize.w * scale, toSize.h * scale, fromX, fromY, edgeGap);
+      if (!start || !end) continue;
+
+      const controls = curveControls(start, end);
+      const pathData = "M " + start.x + " " + start.y +
+        " C " + controls.c1.x + " " + controls.c1.y +
+        " " + controls.c2.x + " " + controls.c2.y +
+        " " + end.x + " " + end.y;
+
+      const selected = ui.selectedType === "edge" && ui.selectedId === edge.id;
+      const strokeWidth = clamp(2 * scale, 1.3, 3.5);
+      const group = document.createElementNS(SVG_NS, "g");
+      group.setAttribute("class", selected ? "edge selected" : "edge");
+      group.dataset.id = edge.id;
+
+      const line = document.createElementNS(SVG_NS, "path");
+      line.setAttribute("class", "edge-line");
+      line.setAttribute("d", pathData);
+      line.style.strokeWidth = (selected ? strokeWidth * 1.45 : strokeWidth) + "px";
+      line.setAttribute("marker-end", selected ? "url(#arrowhead-selected)" : "url(#arrowhead)");
+
+      const hit = document.createElementNS(SVG_NS, "path");
+      hit.setAttribute("class", "edge-hit");
+      hit.setAttribute("d", pathData);
+      hit.addEventListener("pointerdown", function (event) {
+        if (touchPinch) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (ui.mode === "link") cancelLinkMode();
+        setSelection(edge.id, "edge");
+      });
+
+      group.appendChild(line);
+      group.appendChild(hit);
+      dom.edgeGroup.appendChild(group);
+    }
+  }
+
+  /* ---------- Card editing ---------- */
+
+  function onCardTextInput(event) {
+    const textEl = event.currentTarget;
+    const card = textEl.closest(".card");
+    if (!card) return;
+    const item = findItem(card.dataset.id, card.dataset.kind);
+    if (!item) return;
+    item.text = readEditableText(textEl);
+    syncPlaceholder(textEl);
+    scheduleEdgeDraw();
+    scheduleSave();
+  }
+
+  function insertPlainText(el, text) {
+    const selection = window.getSelection();
+    if (!selection) return;
+    if (selection.rangeCount === 0 || !el.contains(selection.anchorNode)) {
+      el.focus({ preventScroll: true });
+      const fullRange = document.createRange();
+      fullRange.selectNodeContents(el);
+      fullRange.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(fullRange);
+    }
+    const range = selection.getRangeAt(0);
+    range.deleteContents();
+    const node = document.createTextNode(text);
+    range.insertNode(node);
+    range.setStartAfter(node);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+
+  function onCardPaste(event) {
+    const clipboard = event.clipboardData || window.clipboardData;
+    if (!clipboard) return;
+    const text = clipboard.getData("text/plain");
+    if (typeof text !== "string") return;
+    event.preventDefault();
+    insertPlainText(event.currentTarget, text);
+    event.currentTarget.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  /* ---------- Deleting ---------- */
+
+  function deleteItem(id, kind) {
+    if (!id) return;
+    if (kind === "block") {
+      doc.blocks = doc.blocks.filter(function (b) { return b.id !== id; });
+      doc.edges = doc.edges.filter(function (e) { return e.from !== id && e.to !== id; });
+      const el = cardEls.get(id);
+      if (el) el.remove();
+      cardEls.delete(id);
+      cardTextEls.delete(id);
+      if (ui.linkSourceId === id) setLinkSource(null);
+    } else if (kind === "table") {
+      doc.tables = doc.tables.filter(function (t) { return t.id !== id; });
+      doc.edges = doc.edges.filter(function (e) { return e.from !== id && e.to !== id; });
+      const el = cardEls.get(id);
+      if (el) el.remove();
+      cardEls.delete(id);
+      if (ui.linkSourceId === id) setLinkSource(null);
+    } else if (kind === "annotation") {
+      doc.annotations = doc.annotations.filter(function (a) { return a.id !== id; });
+      const el = cardEls.get(id);
+      if (el) el.remove();
+      cardEls.delete(id);
+      cardTextEls.delete(id);
+    } else if (kind === "edge") {
+      doc.edges = doc.edges.filter(function (e) { return e.id !== id; });
+    }
+
+    if (ui.selectedId === id) clearSelection();
+    updateToolbar();
+    scheduleEdgeDraw();
+    scheduleSave();
+  }
+
+  function deleteSelected() {
+    if (!ui.selectedId) return;
+    deleteItem(ui.selectedId, ui.selectedType);
+  }
+
+  /* ---------- Card pointer interaction ---------- */
+
+  function onCardPointerDown(event) {
+    const card = event.currentTarget;
+    const id = card.dataset.id;
+    const kind = card.dataset.kind;
+
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    if (touchPinch) {
+      event.preventDefault();
+      return;
+    }
+
+    if (ui.mode === "link") {
+      event.preventDefault();
+      event.stopPropagation();
+      handleLinkTap(kind, id);
+      return;
+    }
+
+    if (event.target.closest(".card-delete")) return;
+
+    setSelection(id, kind);
+
+    if (event.target.closest(".card-grip")) {
+      event.preventDefault();
+      event.stopPropagation();
+      startCardDrag(event, card, id, kind);
+    }
+  }
+
+  function startCardDrag(event, card, id, kind) {
+    if (dragState || touchPinch) return;
+    const item = findItem(id, kind);
+    if (!item) return;
+
+    const active = document.activeElement;
+    if (active && (active.tagName === "INPUT" || active.isContentEditable)) {
+      active.blur();
+    }
+
+    dragState = {
+      pointerId: event.pointerId,
+      id: id,
+      kind: kind,
+      item: item,
+      card: card,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: item.x,
+      originY: item.y,
+      scale: doc.viewport.scale,
+      moved: false
+    };
+
+    card.classList.add("dragging");
+    try {
+      card.setPointerCapture(event.pointerId);
+    } catch (err) {
+      /* Pointer capture can be unavailable in older browsers. */
+    }
+    window.addEventListener("pointermove", onCardDragMove, { passive: false });
+    window.addEventListener("pointerup", onCardDragEnd);
+    window.addEventListener("pointercancel", onCardDragEnd);
+  }
+
+  function onCardDragMove(event) {
+    if (!dragState || event.pointerId !== dragState.pointerId) return;
+    if (event.cancelable) event.preventDefault();
+    const dx = (event.clientX - dragState.startX) / dragState.scale;
+    const dy = (event.clientY - dragState.startY) / dragState.scale;
+    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) dragState.moved = true;
+    dragState.item.x = dragState.originX + dx;
+    dragState.item.y = dragState.originY + dy;
+    setTransform(dragState.card, dragState.item.x, dragState.item.y);
+    scheduleEdgeDraw();
+  }
+
+  function cleanupCardDrag() {
+    if (!dragState) return;
+    dragState.card.classList.remove("dragging");
+    dragState = null;
+    window.removeEventListener("pointermove", onCardDragMove);
+    window.removeEventListener("pointerup", onCardDragEnd);
+    window.removeEventListener("pointercancel", onCardDragEnd);
+  }
+
+  function onCardDragEnd(event) {
+    if (!dragState || event.pointerId !== dragState.pointerId) return;
+    cleanupCardDrag();
+    scheduleEdgeDraw();
+    scheduleSave();
+  }
+
+  function cancelCardDrag() {
+    if (!dragState) return;
+    setTransform(dragState.card, dragState.item.x, dragState.item.y);
+    cleanupCardDrag();
+    scheduleEdgeDraw();
+  }
+
+  /* ---------- Link mode ---------- */
+
+  function startLinkMode() {
+    clearSelection();
+    setLinkSource(null);
+    ui.mode = "link";
+    updateToolbar();
+    updateHint();
+  }
+
+  function cancelLinkMode() {
+    if (ui.mode !== "link" && !ui.linkSourceId) {
+      updateToolbar();
+      updateHint();
+      return;
+    }
+    ui.mode = "normal";
+    setLinkSource(null);
+    updateToolbar();
+    updateHint();
+  }
+
+  function toggleLinkMode() {
+    if (ui.mode === "link") cancelLinkMode();
+    else startLinkMode();
+  }
+
+  function handleLinkTap(kind, id) {
+    if (kind === "annotation") {
+      cancelLinkMode();
+      setSelection(id, kind);
+      return;
+    }
+
+    if (!ui.linkSourceId) {
+      setLinkSource(id);
+      return;
+    }
+
+    if (ui.linkSourceId === id) {
+      showToast("A card can't link to itself.", "error");
+      return;
+    }
+
+    let duplicate = false;
+    for (let i = 0; i < doc.edges.length; i += 1) {
+      const edge = doc.edges[i];
+      const samePair =
+        (edge.from === ui.linkSourceId && edge.to === id) ||
+        (edge.from === id && edge.to === ui.linkSourceId);
+      if (samePair) {
+        duplicate = true;
+        break;
+      }
+    }
+
+    if (duplicate) {
+      showToast("These cards are already linked.", "error");
+      return;
+    }
+
+    const edge = { id: uid(), from: ui.linkSourceId, to: id };
+    doc.edges.push(edge);
+    cancelLinkMode();
+    setSelection(edge.id, "edge");
+    scheduleEdgeDraw();
+    scheduleSave();
+    showToast("Arrow added.", "success");
+  }
+
+  /* ---------- Adding cards ---------- */
+
+  function existingCardRect(item) {
+    const el = cardEls.get(item.id);
+    const size = el ? cardWorldSize(el) : { w: CARD_FALLBACK_WIDTH, h: CARD_FALLBACK_HEIGHT };
+    return {
+      x: item.x,
+      y: item.y,
+      w: size.w,
+      h: size.h
+    };
+  }
+
+  function positionIsFree(x, y, w, h) {
+    const gap = 18;
+    const lists = [
+      { items: doc.blocks, kind: "block" },
+      { items: doc.tables, kind: "table" },
+      { items: doc.annotations, kind: "annotation" }
+    ];
+
+    for (let l = 0; l < lists.length; l += 1) {
+      for (let i = 0; i < lists[l].items.length; i += 1) {
+        const rect = existingCardRect(lists[l].items[i]);
+        if (
+          x < rect.x + rect.w + gap &&
+          x + w + gap > rect.x &&
+          y < rect.y + rect.h + gap &&
+          y + h + gap > rect.y
+        ) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  function contentCenterWorld() {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    const lists = [
+      { items: doc.blocks, kind: "block" },
+      { items: doc.tables, kind: "table" },
+      { items: doc.annotations, kind: "annotation" }
+    ];
+
+    for (let l = 0; l < lists.length; l += 1) {
+      for (let i = 0; i < lists[l].items.length; i += 1) {
+        const rect = existingCardRect(lists[l].items[i]);
+        minX = Math.min(minX, rect.x);
+        minY = Math.min(minY, rect.y);
+        maxX = Math.max(maxX, rect.x + rect.w);
+        maxY = Math.max(maxY, rect.y + rect.h);
+      }
+    }
+
+    if (!Number.isFinite(minX)) {
+      return {
+        x: (dom.viewport.clientWidth / 2 - doc.viewport.x) / doc.viewport.scale,
+        y: (dom.viewport.clientHeight / 2 - doc.viewport.y) / doc.viewport.scale
+      };
+    }
+    return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+  }
+
+  function findOpenCardPosition(baseX, baseY, width, height) {
+    const stepX = width + 64;
+    const stepY = height + 64;
+    const seen = new Set();
+    const offsets = [[0, 0]];
+
+    function addOffset(ix, iy) {
+      const key = ix + ":" + iy;
+      if (seen.has(key)) return;
+      seen.add(key);
+      offsets.push([ix, iy]);
+    }
+
+    const primary = dom.viewport.clientWidth >= 720
+      ? [[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [-2, 0], [0, 2], [0, -2]]
+      : [[0, 1], [0, -1], [0, 2], [0, -2], [1, 0], [-1, 0], [1, 1], [-1, 1]];
+
+    for (let i = 0; i < primary.length; i += 1) addOffset(primary[i][0], primary[i][1]);
+    for (let ring = 1; ring <= 4; ring += 1) {
+      for (let ix = -ring; ix <= ring; ix += 1) {
+        for (let iy = -ring; iy <= ring; iy += 1) {
+          if (Math.max(Math.abs(ix), Math.abs(iy)) !== ring) continue;
+          addOffset(ix, iy);
+        }
+      }
+    }
+
+    for (let i = 0; i < offsets.length; i += 1) {
+      const x = baseX + offsets[i][0] * stepX;
+      const y = baseY + offsets[i][1] * stepY;
+      if (positionIsFree(x, y, width, height)) return { x: x, y: y };
+    }
+
+    return { x: baseX + 24, y: baseY + 24 };
+  }
+
+  function revealCard(item) {
+    const el = cardEls.get(item.id);
+    if (!el) return;
+    const vw = dom.viewport.clientWidth;
+    const vh = dom.viewport.clientHeight;
+    const scale = doc.viewport.scale;
+    const marginX = 48;
+    const marginTop = 34;
+    const marginBottom = el.dataset.kind === "table" ? 164 : 104;
+    const left = item.x * scale + doc.viewport.x;
+    const top = item.y * scale + doc.viewport.y;
+    const rect = el.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+    let dx = 0;
+    let dy = 0;
+
+    if (width > vw - marginX * 2) {
+      dx = (vw - width) / 2 - left;
+    } else if (left < marginX) {
+      dx = marginX - left;
+    } else if (left + width > vw - marginX) {
+      dx = vw - marginX - (left + width);
+    }
+
+    if (height > vh - marginTop - marginBottom) {
+      dy = (vh - height) / 2 - top;
+    } else if (top < marginTop) {
+      dy = marginTop - top;
+    } else if (top + height > vh - marginBottom) {
+      dy = vh - marginBottom - (top + height);
+    }
+
+    if (dx || dy) {
+      doc.viewport.x += dx;
+      doc.viewport.y += dy;
+      applyViewport();
+    }
+  }
+
+  function addCard(kind) {
+    if (ui.mode === "link") cancelLinkMode();
+    if (dragState) cancelCardDrag();
+
+    const center = contentCenterWorld();
+    const item = {
+      id: uid(),
+      x: center.x,
+      y: center.y,
+      text: kind === "block" ? "New idea" : "Add your note here"
+    };
+    const el = createCardEl(item, kind);
+    dom.world.appendChild(el);
+
+    const size = cardWorldSize(el);
+    const width = size.w;
+    const height = size.h;
+    const placement = findOpenCardPosition(
+      center.x - width / 2,
+      center.y - height / 2,
+      width,
+      height
+    );
+    item.x = placement.x;
+    item.y = placement.y;
+    setTransform(el, item.x, item.y);
+
+    if (kind === "block") doc.blocks.push(item);
+    else doc.annotations.push(item);
+    cardEls.set(item.id, el);
+    cardTextEls.set(item.id, el.querySelector(".card-text"));
+
+    setSelection(item.id, kind);
+    revealCard(item);
+    scheduleEdgeDraw();
+    scheduleSave();
+
+    window.requestAnimationFrame(function () {
+      const textEl = cardTextEls.get(item.id);
+      if (!textEl) return;
+      textEl.focus({ preventScroll: true });
+      const range = document.createRange();
+      range.selectNodeContents(textEl);
+      const selection = window.getSelection();
+      if (!selection) return;
+      selection.removeAllRanges();
+      selection.addRange(range);
+    });
+  }
+
+  function addTable() {
+    if (ui.mode === "link") cancelLinkMode();
+    if (dragState) cancelCardDrag();
+
+    const center = contentCenterWorld();
+    const item = {
+      id: uid(),
+      x: center.x,
+      y: center.y,
+      rows: defaultTableRows()
+    };
+    const el = createTableEl(item);
+    dom.world.appendChild(el);
+
+    const size = cardWorldSize(el);
+    const placement = findOpenCardPosition(
+      center.x - size.w / 2,
+      center.y - size.h / 2,
+      size.w,
+      size.h
+    );
+    item.x = placement.x;
+    item.y = placement.y;
+    setTransform(el, item.x, item.y);
+
+    doc.tables.push(item);
+    cardEls.set(item.id, el);
+    setSelection(item.id, "table");
+    revealCard(item);
+    scheduleEdgeDraw();
+    scheduleSave();
+
+    window.requestAnimationFrame(function () {
+      focusTableCell(el, 0, 0, true);
+    });
+  }
+
+  /* ---------- Canvas pan, pinch and zoom ---------- */
+
+  function onViewportPointerDown(event) {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    if (touchPinch) return;
+    if (event.target.closest(".card, #zoom-controls, button, input, .edge-hit")) return;
+
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    try {
+      dom.viewport.setPointerCapture(event.pointerId);
+    } catch (err) {
+      /* Ignore pointer capture failures. */
+    }
+
+    if (pointers.size === 1) {
+      panGesture = {
+        mode: "single",
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        panX: doc.viewport.x,
+        panY: doc.viewport.y,
+        moved: false
+      };
+      dom.viewport.classList.add("panning");
+    } else if (pointers.size === 2) {
+      const points = Array.from(pointers.values());
+      const midX = (points[0].x + points[1].x) / 2;
+      const midY = (points[0].y + points[1].y) / 2;
+      const distance = Math.max(1, Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y));
+      const rect = dom.viewport.getBoundingClientRect();
+      const localX = midX - rect.left;
+      const localY = midY - rect.top;
+      panGesture = {
+        mode: "pinch",
+        startDistance: distance,
+        startScale: doc.viewport.scale,
+        worldX: (localX - doc.viewport.x) / doc.viewport.scale,
+        worldY: (localY - doc.viewport.y) / doc.viewport.scale,
+        moved: true
+      };
+      dom.viewport.classList.add("panning");
+    }
+  }
+
+  function onViewportPointerMove(event) {
+    if (touchPinch) return;
+    if (!pointers.has(event.pointerId)) return;
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (!panGesture) return;
+
+    if (panGesture.mode === "single" && event.pointerId === panGesture.pointerId) {
+      const dx = event.clientX - panGesture.startX;
+      const dy = event.clientY - panGesture.startY;
+      if (Math.hypot(dx, dy) > 5) panGesture.moved = true;
+      doc.viewport.x = panGesture.panX + dx;
+      doc.viewport.y = panGesture.panY + dy;
+      applyViewport();
+      return;
+    }
+
+    if (panGesture.mode === "pinch") {
+      const points = Array.from(pointers.values()).slice(0, 2);
+      if (points.length < 2) return;
+      const midX = (points[0].x + points[1].x) / 2;
+      const midY = (points[0].y + points[1].y) / 2;
+      const distance = Math.max(1, Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y));
+      const rect = dom.viewport.getBoundingClientRect();
+      const localX = midX - rect.left;
+      const localY = midY - rect.top;
+      const scale = clamp(
+        panGesture.startScale * (distance / panGesture.startDistance),
+        MIN_SCALE,
+        MAX_SCALE
+      );
+      doc.viewport.scale = scale;
+      doc.viewport.x = localX - panGesture.worldX * scale;
+      doc.viewport.y = localY - panGesture.worldY * scale;
+      applyViewport();
+    }
+  }
+
+  function onViewportPointerEnd(event) {
+    if (touchPinch) return;
+    if (!pointers.has(event.pointerId)) return;
+    const wasSingle = panGesture && panGesture.mode === "single" && panGesture.pointerId === event.pointerId;
+    const shouldTap = wasSingle && !panGesture.moved && event.type === "pointerup";
+
+    pointers.delete(event.pointerId);
+
+    if (shouldTap) {
+      handleCanvasTap();
+    }
+
+    if (pointers.size === 1) {
+      const remaining = Array.from(pointers.entries())[0];
+      panGesture = {
+        mode: "single",
+        pointerId: remaining[0],
+        startX: remaining[1].x,
+        startY: remaining[1].y,
+        panX: doc.viewport.x,
+        panY: doc.viewport.y,
+        moved: true
+      };
+      dom.viewport.classList.add("panning");
+    } else if (pointers.size === 0) {
+      panGesture = null;
+      dom.viewport.classList.remove("panning");
+      scheduleSave();
+    }
+  }
+
+  function beginTouchPinch() {
+    const points = Array.from(touchPoints.values()).slice(0, 2);
+    if (points.length < 2) return;
+    if (dragState) cancelCardDrag();
+    pointers.clear();
+    panGesture = null;
+    dom.viewport.classList.remove("panning");
+    const active = document.activeElement;
+    if (active && (active.tagName === "INPUT" || active.isContentEditable)) {
+      active.blur();
+    }
+    const midX = (points[0].x + points[1].x) / 2;
+    const midY = (points[0].y + points[1].y) / 2;
+    const distance = Math.max(1, Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y));
+    const rect = dom.viewport.getBoundingClientRect();
+    const localX = midX - rect.left;
+    const localY = midY - rect.top;
+    touchPinch = {
+      startDistance: distance,
+      startScale: doc.viewport.scale,
+      worldX: (localX - doc.viewport.x) / doc.viewport.scale,
+      worldY: (localY - doc.viewport.y) / doc.viewport.scale
+    };
+  }
+
+  function onTouchPointerDownCapture(event) {
+    if (event.pointerType !== "touch") return;
+    if (!dom.viewport.contains(event.target)) return;
+    if (event.target.closest("#zoom-controls, button, input, textarea, select")) return;
+    touchPoints.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (touchPoints.size >= 2) {
+      if (event.cancelable) event.preventDefault();
+      beginTouchPinch();
+    }
+  }
+
+  function onTouchPointerMoveCapture(event) {
+    if (event.pointerType !== "touch") return;
+    if (!touchPoints.has(event.pointerId)) return;
+    touchPoints.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (!touchPinch) return;
+    if (event.cancelable) event.preventDefault();
+    const points = Array.from(touchPoints.values()).slice(0, 2);
+    if (points.length < 2) return;
+    const midX = (points[0].x + points[1].x) / 2;
+    const midY = (points[0].y + points[1].y) / 2;
+    const distance = Math.max(1, Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y));
+    const rect = dom.viewport.getBoundingClientRect();
+    const localX = midX - rect.left;
+    const localY = midY - rect.top;
+    const scale = clamp(touchPinch.startScale * (distance / touchPinch.startDistance), MIN_SCALE, MAX_SCALE);
+    doc.viewport.scale = scale;
+    doc.viewport.x = localX - touchPinch.worldX * scale;
+    doc.viewport.y = localY - touchPinch.worldY * scale;
+    applyViewport();
+  }
+
+  function onTouchPointerEndCapture(event) {
+    if (event.pointerType !== "touch") return;
+    if (!touchPoints.has(event.pointerId)) return;
+    touchPoints.delete(event.pointerId);
+    if (touchPinch && touchPoints.size < 2) {
+      touchPinch = null;
+      scheduleSave();
+    }
+  }
+
+  function clearPointerState() {
+    if (dragState) {
+      cancelCardDrag();
+      scheduleSave();
+    }
+    pointers.clear();
+    touchPoints.clear();
+    touchPinch = null;
+    panGesture = null;
+    dom.viewport.classList.remove("panning");
+  }
+
+  function handleCanvasTap() {
+    if (ui.mode === "link") {
+      cancelLinkMode();
+    } else {
+      clearSelection();
+    }
+    const active = document.activeElement;
+    if (active && active !== document.body && (active.tagName === "INPUT" || active.isContentEditable)) {
+      active.blur();
+    }
+  }
+
+  function onWheel(event) {
+    event.preventDefault();
+    const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? dom.viewport.clientHeight : 1;
+    const dx = event.deltaX * unit;
+    const dy = event.deltaY * unit;
+
+    if (event.ctrlKey || event.metaKey) {
+      const factor = Math.exp(-dy * 0.0018);
+      zoomAt(doc.viewport.scale * factor, event.clientX, event.clientY);
+    } else {
+      doc.viewport.x -= dx;
+      doc.viewport.y -= dy;
+      applyViewport();
+      scheduleSave();
+    }
+  }
+
+  /* ---------- Keyboard, title and reset ---------- */
+
+  function onKeyDown(event) {
+    if (dom.dialog.open) return;
+
+    if (event.key === "Escape") {
+      let handled = false;
+      if (ui.mode === "link") {
+        cancelLinkMode();
+        handled = true;
+      }
+      if (ui.selectedId) {
+        clearSelection();
+        handled = true;
+      }
+      const active = document.activeElement;
+      if (active && (active.tagName === "INPUT" || active.isContentEditable)) {
+        active.blur();
+        handled = true;
+      }
+      if (handled) event.preventDefault();
+      return;
+    }
+
+    if (event.key === "Delete" || event.key === "Backspace") {
+      if (isEditableTarget(event.target)) return;
+      if (!ui.selectedId) return;
+      event.preventDefault();
+      deleteSelected();
+    }
+  }
+
+  function resetDocument() {
+    clearPointerState();
+    cancelLinkMode();
+    clearSelection();
+    doc = makeStarterDocument();
+    dom.title.value = "";
+    renderAllCards();
+    centerStarter();
+    updateToolbar();
+    updateHint();
+    scheduleSave();
+    showToast("New map ready.", "success");
+  }
+
+  function openNewMapDialog() {
+    if (typeof dom.dialog.showModal === "function") {
+      dom.dialog.returnValue = "cancel";
+      dom.dialog.showModal();
+    } else if (window.confirm("Start a new map? This clears the current map.")) {
+      resetDocument();
+    }
+  }
+
+  /* ---------- Wiring ---------- */
+
+  dom.title.addEventListener("input", function () {
+    doc.title = dom.title.value;
+    scheduleSave();
+  });
+
+  dom.newBtn.addEventListener("click", openNewMapDialog);
+  dom.dialog.addEventListener("close", function () {
+    if (dom.dialog.returnValue === "confirm") resetDocument();
+  });
+  dom.dialog.addEventListener("click", function (event) {
+    if (event.target === dom.dialog) dom.dialog.close("cancel");
+  });
+
+  dom.addBlockBtn.addEventListener("click", function () { addCard("block"); });
+  dom.addNoteBtn.addEventListener("click", function () { addCard("annotation"); });
+  dom.addTableBtn.addEventListener("click", addTable);
+  dom.addArrowBtn.addEventListener("click", toggleLinkMode);
+  dom.deleteBtn.addEventListener("click", deleteSelected);
+
+  dom.zoomIn.addEventListener("click", function () { zoomBy(1.25); });
+  dom.zoomOut.addEventListener("click", function () { zoomBy(0.8); });
+  dom.zoomFit.addEventListener("click", fitToContent);
+
+  dom.exportBtn.addEventListener("click", exportPNG);
+
+  dom.viewport.addEventListener("pointerdown", onViewportPointerDown);
+  dom.viewport.addEventListener("pointermove", onViewportPointerMove, { passive: false });
+  dom.viewport.addEventListener("pointerup", onViewportPointerEnd);
+  dom.viewport.addEventListener("pointercancel", onViewportPointerEnd);
+  dom.viewport.addEventListener("wheel", onWheel, { passive: false });
+
+  window.addEventListener("pointerdown", onTouchPointerDownCapture, { capture: true, passive: false });
+  window.addEventListener("pointermove", onTouchPointerMoveCapture, { capture: true, passive: false });
+  window.addEventListener("pointerup", onTouchPointerEndCapture, { capture: true });
+  window.addEventListener("pointercancel", onTouchPointerEndCapture, { capture: true });
+
+  document.addEventListener("keydown", onKeyDown);
+  document.addEventListener("gesturestart", function (event) { event.preventDefault(); }, { passive: false });
+  document.addEventListener("gesturechange", function (event) { event.preventDefault(); }, { passive: false });
+
+  window.addEventListener("resize", function () {
+    applyViewport();
+    updateHint();
+  });
+  window.addEventListener("pagehide", flushSave);
+  window.addEventListener("blur", clearPointerState);
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") {
+      flushSave();
+      clearPointerState();
+    }
+  });
+
+  /* ---------- PNG export helpers ---------- */
+
+  function roundRectPath(ctx, x, y, w, h, radius) {
+    const r = Math.max(0, Math.min(radius, w / 2, h / 2));
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function getCardMetrics(item, kind) {
+    const el = cardEls.get(item.id);
+    const textEl = cardTextEls.get(item.id);
+    if (!el || !textEl) {
+      return {
+        item: item,
+        kind: kind,
+        w: CARD_FALLBACK_WIDTH,
+        h: CARD_FALLBACK_HEIGHT,
+        fontSize: 15,
+        lineHeight: 22.5,
+        fontWeight: "400",
+        fontStyle: "normal",
+        fontFamily: FONT_STACK,
+        color: kind === "block" ? "#1e1b4b" : "#78350f",
+        bg: kind === "block" ? "#eef2ff" : "#fffbeb",
+        borderColor: kind === "block" ? "#c7d2fe" : "#d8b573",
+        borderWidth: 1,
+        radius: 12,
+        padL: 14,
+        padR: 14,
+        padT: 10,
+        contentWidth: CARD_FALLBACK_WIDTH - 30
+      };
+    }
+
+    const elStyle = window.getComputedStyle(el);
+    const textStyle = window.getComputedStyle(textEl);
+    const fontSize = parseFloat(textStyle.fontSize) || 15;
+    const lineHeight = parseFloat(textStyle.lineHeight) || fontSize * 1.5;
+    const padL = parseFloat(textStyle.paddingLeft) || 14;
+    const padR = parseFloat(textStyle.paddingRight) || 14;
+    const padT = parseFloat(textStyle.paddingTop) || 10;
+    const borderWidth = parseFloat(elStyle.borderLeftWidth) || 1;
+    const size = cardWorldSize(el);
+    const w = size.w;
+    const h = size.h;
+
+    return {
+      item: item,
+      kind: kind,
+      w: w,
+      h: h,
+      fontSize: fontSize,
+      lineHeight: lineHeight,
+      fontWeight: textStyle.fontWeight || "400",
+      fontStyle: textStyle.fontStyle || "normal",
+      fontFamily: textStyle.fontFamily || FONT_STACK,
+      color: textStyle.color,
+      bg: elStyle.backgroundColor,
+      borderColor: elStyle.borderTopColor,
+      borderWidth: borderWidth,
+      radius: parseFloat(elStyle.borderRadius) || 12,
+      padL: padL,
+      padR: padR,
+      padT: padT,
+      contentWidth: Math.max(10, w - borderWidth * 2 - padL - padR + 2)
+    };
+  }
+
+  function getTableMetrics(item) {
+    const el = cardEls.get(item.id);
+    if (!el) {
+      return {
+        item: item,
+        kind: "table",
+        w: tablePreferredWidth(item),
+        h: CARD_FALLBACK_HEIGHT,
+        radius: 12,
+        bg: "#ecfdf5",
+        borderColor: "#a7f3d0",
+        borderWidth: 1,
+        cells: []
+      };
+    }
+
+    const elStyle = window.getComputedStyle(el);
+    const cardRect = el.getBoundingClientRect();
+    const scale = doc.viewport.scale || 1;
+    const size = cardWorldSize(el);
+    const table = el.querySelector(".map-table");
+    const cells = [];
+
+    if (table) {
+      const cellEls = table.querySelectorAll("th, td");
+      for (let i = 0; i < cellEls.length; i += 1) {
+        const cell = cellEls[i];
+        const rect = cell.getBoundingClientRect();
+        const style = window.getComputedStyle(cell);
+        const borderRightWidth = parseFloat(style.borderRightWidth) || 0;
+        const borderBottomWidth = parseFloat(style.borderBottomWidth) || 0;
+        cells.push({
+          text: cell.innerText,
+          x: (rect.left - cardRect.left) / scale,
+          y: (rect.top - cardRect.top) / scale,
+          w: rect.width / scale,
+          h: rect.height / scale,
+          isHeader: cell.tagName === "TH",
+          bg: style.backgroundColor,
+          color: style.color,
+          fontFamily: style.fontFamily || FONT_STACK,
+          fontSize: parseFloat(style.fontSize) || 14,
+          fontStyle: style.fontStyle || "normal",
+          fontWeight: style.fontWeight || "400",
+          lineHeight: parseFloat(style.lineHeight) || 19.6,
+          padL: parseFloat(style.paddingLeft) || 10,
+          padR: parseFloat(style.paddingRight) || 10,
+          padT: parseFloat(style.paddingTop) || 8,
+          padB: parseFloat(style.paddingBottom) || 8,
+          borderRightWidth: borderRightWidth,
+          borderRightColor: style.borderRightColor,
+          borderBottomWidth: borderBottomWidth,
+          borderBottomColor: style.borderBottomColor
+        });
+      }
+    }
+
+    return {
+      item: item,
+      kind: "table",
+      w: size.w,
+      h: size.h,
+      radius: parseFloat(elStyle.borderRadius) || 12,
+      bg: elStyle.backgroundColor,
+      borderColor: elStyle.borderTopColor,
+      borderWidth: parseFloat(elStyle.borderLeftWidth) || 1,
+      cells: cells
+    };
+  }
+
+  function wrapCanvasText(ctx, text, maxWidth) {
+    const lines = [];
+    const normalized = String(text).replace(/\r\n?/g, "\n");
+    const paragraphs = normalized.split("\n");
+
+    for (let p = 0; p < paragraphs.length; p += 1) {
+      const paragraph = paragraphs[p];
+      if (!paragraph.trim()) {
+        lines.push("");
+        continue;
+      }
+      const words = paragraph.split(/[ \t]+/).filter(function (word) { return word.length > 0; });
+      let line = "";
+
+      for (let w = 0; w < words.length; w += 1) {
+        const word = words[w];
+        const candidate = line ? line + " " + word : word;
+        if (ctx.measureText(candidate).width <= maxWidth) {
+          line = candidate;
+          continue;
+        }
+        if (line) {
+          lines.push(line);
+          line = "";
+        }
+        if (ctx.measureText(word).width <= maxWidth) {
+          line = word;
+          continue;
+        }
+        let chunk = "";
+        for (let c = 0; c < word.length; c += 1) {
+          const char = word.charAt(c);
+          if (!chunk || ctx.measureText(chunk + char).width <= maxWidth) {
+            chunk += char;
+          } else {
+            lines.push(chunk);
+            chunk = char;
+          }
+        }
+        line = chunk;
+      }
+      if (line) lines.push(line);
+    }
+
+    return lines;
+  }
+
+  function drawExportArrow(ctx, start, end) {
+    const controls = curveControls(start, end);
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+    ctx.bezierCurveTo(controls.c1.x, controls.c1.y, controls.c2.x, controls.c2.y, end.x, end.y);
+    ctx.strokeStyle = "#4f46e5";
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = "round";
+    ctx.stroke();
+
+    let tx = end.x - controls.c2.x;
+    let ty = end.y - controls.c2.y;
+    let length = Math.hypot(tx, ty);
+    if (length < 0.001) {
+      tx = end.x - start.x;
+      ty = end.y - start.y;
+      length = Math.hypot(tx, ty);
+    }
+    if (length < 0.001) return;
+    const ux = tx / length;
+    const uy = ty / length;
+    const headLength = 11;
+    const headWidth = 8;
+    const baseX = end.x - ux * headLength;
+    const baseY = end.y - uy * headLength;
+    ctx.beginPath();
+    ctx.moveTo(end.x, end.y);
+    ctx.lineTo(baseX - uy * headWidth / 2, baseY + ux * headWidth / 2);
+    ctx.lineTo(baseX + uy * headWidth / 2, baseY - ux * headWidth / 2);
+    ctx.closePath();
+    ctx.fillStyle = "#4f46e5";
+    ctx.fill();
+  }
+
+  function drawExportCard(ctx, m, offsetX, offsetY) {
+    const x = m.item.x + offsetX;
+    const y = m.item.y + offsetY;
+    const w = m.w;
+    const h = m.h;
+    const bw = m.borderWidth;
+
+    ctx.save();
+    ctx.shadowColor = "rgba(15, 23, 42, 0.12)";
+    ctx.shadowBlur = 16;
+    ctx.shadowOffsetY = 6;
+    roundRectPath(ctx, x, y, w, h, m.radius);
+    ctx.fillStyle = m.bg;
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    roundRectPath(ctx, x + bw / 2, y + bw / 2, w - bw, h - bw, Math.max(0, m.radius - bw / 2));
+    ctx.strokeStyle = m.borderColor;
+    ctx.lineWidth = bw;
+    if (m.kind === "annotation") ctx.setLineDash([6, 4]);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    roundRectPath(ctx, x, y, w, h, m.radius);
+    ctx.clip();
+
+    ctx.fillStyle = m.color;
+    ctx.font = m.fontStyle + " " + m.fontWeight + " " + m.fontSize + "px " + m.fontFamily;
+    ctx.textBaseline = "middle";
+    const lines = wrapCanvasText(ctx, m.item.text, m.contentWidth);
+    let lineTop = y + bw + m.padT;
+    const textX = x + bw + m.padL;
+
+    for (let i = 0; i < lines.length; i += 1) {
+      const middle = lineTop + m.lineHeight / 2;
+      if (middle > y + h) break;
+      ctx.fillText(lines[i], textX, middle);
+      lineTop += m.lineHeight;
+    }
+    ctx.restore();
+  }
+
+  function drawExportTable(ctx, m, offsetX, offsetY) {
+    const x = m.item.x + offsetX;
+    const y = m.item.y + offsetY;
+    const w = m.w;
+    const h = m.h;
+    const bw = m.borderWidth;
+
+    ctx.save();
+    ctx.shadowColor = "rgba(6, 78, 59, 0.14)";
+    ctx.shadowBlur = 16;
+    ctx.shadowOffsetY = 6;
+    roundRectPath(ctx, x, y, w, h, m.radius);
+    ctx.fillStyle = m.bg;
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    roundRectPath(ctx, x + bw / 2, y + bw / 2, w - bw, h - bw, Math.max(0, m.radius - bw / 2));
+    ctx.clip();
+
+    for (let i = 0; i < m.cells.length; i += 1) {
+      const cell = m.cells[i];
+      if (cell.bg && cell.bg !== "rgba(0, 0, 0, 0)") {
+        ctx.fillStyle = cell.bg;
+        ctx.fillRect(x + cell.x, y + cell.y, cell.w, cell.h);
+      }
+      if (cell.borderRightWidth > 0) {
+        ctx.strokeStyle = cell.borderRightColor;
+        ctx.lineWidth = Math.max(1, cell.borderRightWidth);
+        ctx.beginPath();
+        ctx.moveTo(x + cell.x + cell.w, y + cell.y);
+        ctx.lineTo(x + cell.x + cell.w, y + cell.y + cell.h);
+        ctx.stroke();
+      }
+      if (cell.borderBottomWidth > 0) {
+        ctx.strokeStyle = cell.borderBottomColor;
+        ctx.lineWidth = Math.max(1, cell.borderBottomWidth);
+        ctx.beginPath();
+        ctx.moveTo(x + cell.x, y + cell.y + cell.h);
+        ctx.lineTo(x + cell.x + cell.w, y + cell.y + cell.h);
+        ctx.stroke();
+      }
+    }
+
+    for (let i = 0; i < m.cells.length; i += 1) {
+      const cell = m.cells[i];
+      if (!cell.text) continue;
+      const cellX = x + cell.x;
+      const cellY = y + cell.y;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(cellX, cellY, cell.w, cell.h);
+      ctx.clip();
+      ctx.fillStyle = cell.color;
+      ctx.font = cell.fontStyle + " " + cell.fontWeight + " " + cell.fontSize + "px " + cell.fontFamily;
+      ctx.textBaseline = "middle";
+      const contentWidth = Math.max(10, cell.w - cell.padL - cell.padR - cell.borderRightWidth + 2);
+      const lines = wrapCanvasText(ctx, cell.text, contentWidth);
+      let lineTop = cellY + cell.padT;
+      const textX = cellX + cell.padL;
+      for (let line = 0; line < lines.length; line += 1) {
+        const middle = lineTop + cell.lineHeight / 2;
+        if (middle > cellY + cell.h) break;
+        ctx.fillText(lines[line], textX, middle);
+        lineTop += cell.lineHeight;
+      }
+      ctx.restore();
+    }
+    ctx.restore();
+
+    ctx.save();
+    roundRectPath(ctx, x + bw / 2, y + bw / 2, w - bw, h - bw, Math.max(0, m.radius - bw / 2));
+    ctx.strokeStyle = m.borderColor;
+    ctx.lineWidth = bw;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function truncateCanvasText(ctx, text, maxWidth) {
+    if (ctx.measureText(text).width <= maxWidth) return text;
+    const chars = Array.from(text);
+    const ellipsis = "\u2026";
+    while (chars.length > 0 && ctx.measureText(chars.join("") + ellipsis).width > maxWidth) {
+      chars.pop();
+    }
+    return chars.join("").replace(/\s+$/, "") + ellipsis;
+  }
+
+  function drawExportTitle(ctx, logicalWidth, title, titleTop) {
+    const maxWidth = logicalWidth - 128;
+    let size = 40;
+    ctx.font = "700 " + size + "px " + FONT_STACK;
+    while (size > 20 && ctx.measureText(title).width > maxWidth) {
+      size -= 2;
+      ctx.font = "700 " + size + "px " + FONT_STACK;
+    }
+    const finalText = truncateCanvasText(ctx, title, maxWidth);
+    ctx.fillStyle = "#0f172a";
+    ctx.textBaseline = "middle";
+    ctx.fillText(finalText, 64, titleTop + size / 2);
+  }
+
+  function slugifyTitle(title) {
+    const normalized = (title || "Untitled Mind Map")
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60)
+      .replace(/-+$/g, "");
+    return (normalized || "mind-map") + ".png";
+  }
+
+  /* ---------- PNG export ---------- */
+
+  function setExportBusy(busy) {
+    dom.exportBtn.disabled = busy;
+    dom.exportBtn.dataset.busy = busy ? "true" : "false";
+    dom.exportBtn.setAttribute("aria-busy", busy ? "true" : "false");
+    dom.exportBtn.setAttribute("aria-label", busy ? "Exporting map as PNG" : "Export map as PNG");
+    dom.exportBtn.title = busy ? "Exporting map as PNG" : "Export map as PNG";
+    dom.exportLabel.textContent = busy ? "Exporting\u2026" : "Export PNG";
+  }
+
+  function renderExportCanvas() {
+    const metrics = [];
+    for (let i = 0; i < doc.blocks.length; i += 1) {
+      metrics.push(getCardMetrics(doc.blocks[i], "block"));
+    }
+    for (let i = 0; i < doc.tables.length; i += 1) {
+      metrics.push(getTableMetrics(doc.tables[i]));
+    }
+    for (let i = 0; i < doc.annotations.length; i += 1) {
+      metrics.push(getCardMetrics(doc.annotations[i], "annotation"));
+    }
+
+    const hasItems = metrics.length > 0;
+    const padding = 64;
+    const contentTop = 136;
+    const title = (doc.title || "").trim() || "Untitled Mind Map";
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (let i = 0; i < metrics.length; i += 1) {
+      const m = metrics[i];
+      minX = Math.min(minX, m.item.x);
+      minY = Math.min(minY, m.item.y);
+      maxX = Math.max(maxX, m.item.x + m.w);
+      maxY = Math.max(maxY, m.item.y + m.h);
+    }
+
+    const contentW = hasItems ? Math.max(1, maxX - minX) : 0;
+    const contentH = hasItems ? Math.max(1, maxY - minY) : 0;
+    const logicalW = Math.max(720, Math.ceil(contentW + padding * 2));
+    const logicalH = hasItems ? Math.ceil(contentTop + contentH + padding) : 240;
+    const offsetX = hasItems ? (logicalW - contentW) / 2 - minX : padding;
+    const offsetY = hasItems ? contentTop - minY : contentTop;
+    const titleTop = hasItems ? 44 : 96;
+
+    let ratio = 2;
+    ratio = Math.min(ratio, 8192 / logicalW, 8192 / logicalH);
+    ratio = Math.min(ratio, Math.sqrt(16000000 / (logicalW * logicalH)));
+    if (!Number.isFinite(ratio) || ratio <= 0) throw new Error("Invalid export dimensions.");
+
+    let pixelWidth = Math.max(1, Math.round(logicalW * ratio));
+    let pixelHeight = Math.max(1, Math.round(logicalH * ratio));
+
+    if (pixelWidth > 8192 || pixelHeight > 8192) {
+      const dimensionShrink = Math.min(8192 / pixelWidth, 8192 / pixelHeight);
+      pixelWidth = Math.max(1, Math.floor(pixelWidth * dimensionShrink));
+      pixelHeight = Math.max(1, Math.floor(pixelHeight * dimensionShrink));
+    }
+    if (pixelWidth * pixelHeight > 16000000) {
+      const shrink = Math.sqrt(16000000 / (pixelWidth * pixelHeight));
+      pixelWidth = Math.max(1, Math.floor(pixelWidth * shrink));
+      pixelHeight = Math.max(1, Math.floor(pixelHeight * shrink));
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = pixelWidth;
+    canvas.height = pixelHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas 2D is unavailable.");
+
+    ctx.setTransform(pixelWidth / logicalW, 0, 0, pixelHeight / logicalH, 0, 0);
+    ctx.fillStyle = "#f6f7fb";
+    ctx.fillRect(0, 0, logicalW, logicalH);
+
+    const cols = Math.floor(logicalW / 40);
+    const rows = Math.floor(logicalH / 40);
+    if (cols * rows <= 30000) {
+      ctx.fillStyle = "rgba(100, 116, 139, 0.10)";
+      for (let gx = 20; gx < logicalW; gx += 40) {
+        for (let gy = 20; gy < logicalH; gy += 40) {
+          ctx.fillRect(gx, gy, 1.4, 1.4);
+        }
+      }
+    }
+
+    const metricsById = new Map();
+    for (let i = 0; i < metrics.length; i += 1) {
+      metricsById.set(metrics[i].item.id, metrics[i]);
+    }
+
+    for (let i = 0; i < doc.edges.length; i += 1) {
+      const edge = doc.edges[i];
+      const from = metricsById.get(edge.from);
+      const to = metricsById.get(edge.to);
+      if (!from || !to) continue;
+
+      const fromX = from.item.x + offsetX + from.w / 2;
+      const fromY = from.item.y + offsetY + from.h / 2;
+      const toX = to.item.x + offsetX + to.w / 2;
+      const toY = to.item.y + offsetY + to.h / 2;
+      const start = anchoredPoint(fromX, fromY, from.w, from.h, toX, toY, 7);
+      const end = anchoredPoint(toX, toY, to.w, to.h, fromX, fromY, 7);
+      if (!start || !end) continue;
+      drawExportArrow(ctx, start, end);
+    }
+
+    for (let i = 0; i < metrics.length; i += 1) {
+      if (metrics[i].kind === "block") drawExportCard(ctx, metrics[i], offsetX, offsetY);
+    }
+    for (let i = 0; i < metrics.length; i += 1) {
+      if (metrics[i].kind === "table") drawExportTable(ctx, metrics[i], offsetX, offsetY);
+    }
+    for (let i = 0; i < metrics.length; i += 1) {
+      if (metrics[i].kind === "annotation") drawExportCard(ctx, metrics[i], offsetX, offsetY);
+    }
+
+    drawExportTitle(ctx, logicalW, title, titleTop);
+
+    return { canvas: canvas, filename: slugifyTitle(title) };
+  }
+
+  function canvasToBlob(canvas) {
+    return new Promise(function (resolve, reject) {
+      if (typeof canvas.toBlob !== "function") {
+        reject(new Error("PNG encoding is unavailable."));
+        return;
+      }
+      try {
+        canvas.toBlob(function (blob) {
+          if (blob) resolve(blob);
+          else reject(new Error("PNG encoding failed."));
+        }, "image/png");
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.style.display = "none";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+  }
+
+  async function exportPNG() {
+    if (ui.isExporting) return;
+    ui.isExporting = true;
+    setExportBusy(true);
+
+    try {
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (fontError) {
+          /* Continue with system fonts if the font set cannot be awaited. */
+        }
+      }
+      const output = renderExportCanvas();
+      const blob = await canvasToBlob(output.canvas);
+      downloadBlob(blob, output.filename);
+      showToast("PNG exported.", "success");
+    } catch (err) {
+      showToast("Could not export the PNG. Please try again.", "error");
+    } finally {
+      ui.isExporting = false;
+      setExportBusy(false);
+    }
+  }
+
+  /* ---------- Boot ---------- */
+
+  function init() {
+    const restored = loadDocument();
+    if (restored) {
+      doc = restored.doc;
+    } else {
+      doc = makeStarterDocument();
+    }
+
+    dom.title.value = doc.title;
+    applyViewport();
+    renderAllCards();
+
+    if (!restored) {
+      centerStarter();
+      scheduleSave();
+    } else if (restored.needsFit) {
+      fitToContent();
+    }
+
+    updateToolbar();
+    updateHint();
+    scheduleEdgeDraw();
+
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(function () {
+        scheduleEdgeDraw();
+      }).catch(function () {
+        /* Fonts may be unavailable; rendering still works. */
+      });
+    }
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
