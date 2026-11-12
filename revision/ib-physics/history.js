@@ -171,7 +171,7 @@
         .sort((a, b) => (counts.get(b.id) || 0) - (counts.get(a.id) || 0))[0];
       state.classId = best ? best.id : "";
     }
-    if (state.studentId && !state.roster.some((item) => item.id === state.studentId && item.class_id === state.classId)) {
+    if (state.studentId && !state.roster.some((item) => item.auth_user_id === state.studentId && item.class_id === state.classId)) {
       state.studentId = "";
     }
   }
@@ -215,7 +215,7 @@
   function studentName(attempt) {
     const profile = joined(attempt.student);
     if (profile && profile.display_name) return profile.display_name;
-    const roster = state.roster.find((item) => item.id === attempt.student_id);
+    const roster = state.roster.find((item) => item.auth_user_id === attempt.student_id);
     return roster ? roster.display_name : "Student";
   }
 
@@ -309,9 +309,9 @@
 
   function studentOptions() {
     return state.roster
-      .filter((item) => item.class_id === state.classId)
+      .filter((item) => item.class_id === state.classId && item.auth_user_id)
       .map((item) =>
-        `<option value="${esc(item.id)}" ${item.id === state.studentId ? "selected" : ""}>${esc(item.display_name)}</option>`
+        `<option value="${esc(item.auth_user_id)}" ${item.auth_user_id === state.studentId ? "selected" : ""}>${esc(item.display_name)}</option>`
       ).join("");
   }
 
@@ -427,7 +427,7 @@
     const attempts = filteredAttempts();
     const data = analyze(attempts);
     const classItem = state.classes.find((item) => item.id === state.classId);
-    const studentItem = state.roster.find((item) => item.id === state.studentId);
+    const studentItem = state.roster.find((item) => item.auth_user_id === state.studentId);
     const scope = isTeacher
       ? `${classItem ? classItem.name : "Class"}${studentItem ? " · " + studentItem.display_name : " · all students"}`
       : "Your completed attempts";
