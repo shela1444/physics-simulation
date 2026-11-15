@@ -70,6 +70,7 @@
     if (state.status === "unlinked") { renderUnlinked(state.message); return; }
     if (state.status === "teacher") { renderTeacherNotice(); return; }
     if (state.status !== "student") { renderError(state.message || "Could not load your account."); return; }
+    if (state.membership?.quiz_only) { renderQuizOnly(); return; }
     if (!await loadRecords()) return;
     render();
   }
@@ -107,6 +108,10 @@
   function renderTeacherNotice() {
     setAccount(auth);
     app.innerHTML = `<div class="authcard"><h1>Teacher account</h1><p>Open the teacher dashboard to manage classes and records, or view question-level quiz history for every student.</p><div class="actions-inline"><a class="btn primary" href="teacher.html">Teacher dashboard</a><a class="btn ghost" href="history.html">Quiz history</a><button class="btn ghost" onclick="signOutErrorBook()">Sign out</button></div></div>`;
+  }
+  function renderQuizOnly() {
+    setAccount(auth);
+    app.innerHTML = `<div class="authcard"><h1>Quiz-only account</h1><p>The Error Book is not available for this class. You can still use the quiz and view your own quiz history.</p><div class="actions-inline"><a class="btn primary" href="index.html">Daily practice</a><a class="btn ghost" href="history.html">Quiz history</a><button class="btn ghost" onclick="signOutErrorBook()">Sign out</button></div></div>`;
   }
   function renderError(message) {
     setAccount(null);

@@ -62,12 +62,14 @@
     const nameEl = document.getElementById("accountName");
     const outEl = document.getElementById("signOutBtn");
     const teacherEl = document.getElementById("teacherDashLink");
+    const errorBookEl = document.getElementById("errorBookLink");
     if (nameEl) {
       nameEl.textContent = name || "";
       nameEl.classList.toggle("hidden", !name);
     }
     if (outEl) outEl.classList.toggle("hidden", !auth || !["student", "teacher"].includes(auth.status));
     if (teacherEl) teacherEl.classList.toggle("hidden", !auth || auth.status !== "teacher");
+    if (errorBookEl) errorBookEl.classList.toggle("hidden", Boolean(auth && auth.status === "student" && auth.membership?.quiz_only));
   }
 
   function formatDate(value) {

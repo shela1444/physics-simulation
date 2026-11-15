@@ -100,8 +100,13 @@
   }
 
   async function fetchMembership(userId) {
-    const { data, error } = await client.from("class_members")
-      .select("class_id, joined_at").eq("student_id", userId).maybeSingle();
+    let { data, error } = await client.from("class_members")
+      .select("class_id, joined_at, quiz_only").eq("student_id", userId).maybeSingle();
+    if (error && (error.code === "42703" || /quiz_only/i.test(error.message || ""))) {
+      ({ data, error } = await client.from("class_members")
+        .select("class_id, joined_at").eq("student_id", userId).maybeSingle());
+      if (data) data = { ...data, quiz_only: false };
+    }
     if (error) throw error;
     return data;
   }
@@ -158,7 +163,7 @@
         user: session.user,
         profile,
         roster,
-        membership: membership || { class_id: roster.class_id }
+        membership: membership || { class_id: roster.class_id, quiz_only: false }
       };
       flushPending().catch(() => {});
       return currentState;

@@ -244,7 +244,7 @@ body{-webkit-text-size-adjust:100%}
     <div class="topbar-actions">
       <span class="who" id="accountName"></span>
       <a class="btn ghost hidden" id="teacherDashLink" href="teacher.html">Teacher dashboard</a>
-      <a class="btn ghost" href="error-log.html">Error book</a>
+      <a class="btn ghost" id="errorBookLink" href="error-log.html">Error book</a>
       <a class="btn ghost" href="history.html">History</a>
       <button class="btn ghost hidden" id="signOutBtn" onclick="signOutQuiz()">Sign out</button>
       <button class="btn ghost hidden" id="changeTopicBtn" onclick="goTopics()">Change topic</button>
@@ -303,7 +303,8 @@ function accountEls(){
   return {
     name:document.getElementById('accountName'),
     out:document.getElementById('signOutBtn'),
-    teacher:document.getElementById('teacherDashLink')
+    teacher:document.getElementById('teacherDashLink'),
+    errorBook:document.getElementById('errorBookLink')
   };
 }
 function setAccountBar(auth){
@@ -313,6 +314,7 @@ function setAccountBar(auth){
   el.name.classList.toggle('hidden', !name || auth?.status==='signed_out' || auth?.status==='unconfigured');
   el.out.classList.toggle('hidden', !auth || !['student','teacher'].includes(auth.status));
   el.teacher.classList.toggle('hidden', !auth || auth.status!=='teacher');
+  if(el.errorBook) el.errorBook.classList.toggle('hidden', Boolean(auth && auth.status==='student' && auth.membership?.quiz_only));
 }
 function renderAuthLoading(){
   document.getElementById('app').innerHTML=`<div class="hero"><h1>Things to be Remembered</h1><p>Checking your account…</p></div><div class="authcard"><p>One moment.</p></div>`;
