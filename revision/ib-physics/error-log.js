@@ -111,7 +111,7 @@
   }
   function renderQuizOnly() {
     setAccount(auth);
-    app.innerHTML = `<div class="authcard"><h1>Quiz-only account</h1><p>The Error Book is not available for this class. You can still use the quiz and view your own quiz history.</p><div class="actions-inline"><a class="btn primary" href="index.html">Daily practice</a><a class="btn ghost" href="history.html">Quiz history</a><button class="btn ghost" onclick="signOutErrorBook()">Sign out</button></div></div>`;
+    app.innerHTML = `<div class="authcard"><h1>Quiz-only account</h1><p>The Error Book is not available for this class. You can still use the quiz and view your own quiz history.</p><div class="actions-inline"><a class="btn primary" href="index.html">Home</a><a class="btn ghost" href="history.html">Quiz history</a><button class="btn ghost" onclick="signOutErrorBook()">Sign out</button></div></div>`;
   }
   function renderError(message) {
     setAccount(null);

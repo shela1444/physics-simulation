@@ -87,7 +87,7 @@
           <button class="btn primary" id="teacherLoginBtn" type="submit">Sign in</button>
         </form>
         <div class="form-error" id="teacherLoginError">${esc(message || "")}</div>
-        <div class="auth-note">Students use the <a href="index.html">student quiz</a>.</div>
+        <div class="auth-note">Students use the <a href="practice.html">daily practice</a>.</div>
       </div>`;
   }
 
@@ -119,7 +119,7 @@
         <h1>Teacher access required</h1>
         <p>Ask the site owner to add this email to the teacher allowlist, then sign out and back in.</p>
         <div class="auth-actions">
-          <a class="btn primary" href="index.html">Go to student quiz</a>
+          <a class="btn primary" href="practice.html">Go to daily practice</a>
           <button class="btn ghost" onclick="signOutTeacher()">Sign out</button>
         </div>
       </div>`;
