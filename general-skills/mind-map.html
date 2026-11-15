@@ -186,8 +186,61 @@
     animation: spin 750ms linear infinite;
   }
   #export-btn[data-busy="true"] .spinner { display: inline-block; }
-  #export-btn[data-busy="true"] .icon-export { display: none; }
+  #export-btn[data-busy="true"] .icon-export,
+  #export-btn[data-busy="true"] .icon-chevron { display: none; }
+  .icon-chevron { width: 13px; height: 13px; margin-left: -2px; opacity: 0.7; }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  .export-wrap { position: relative; display: flex; flex: 0 0 auto; }
+
+  .export-menu {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 70;
+    width: min(256px, calc(100vw - 20px));
+    padding: 6px;
+    border: 1px solid rgba(148, 163, 184, 0.32);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 22px 54px -24px rgba(15, 23, 42, 0.55);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+  }
+  .export-menu[hidden] { display: none; }
+  .export-menu-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    width: 100%;
+    padding: 10px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background-color 120ms ease;
+  }
+  .export-menu-item:hover,
+  .export-menu-item:focus-visible { background: #f1f5f9; }
+  .export-menu-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+  }
+  .export-menu-icon.photo { background: #ecfdf5; color: #047857; }
+  .export-menu-icon.json { background: #fff7ed; color: #c2410c; }
+  .export-menu-icon svg { width: 17px; height: 17px; }
+  .export-menu-copy { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .export-menu-copy strong { font-size: 13px; font-weight: 700; line-height: 1.25; }
+  .export-menu-copy small { color: var(--muted); font-size: 11.5px; line-height: 1.35; }
 
   /* ---------- Canvas ---------- */
 
@@ -747,6 +800,7 @@
     font-size: 14px;
     line-height: 1.55;
   }
+  #import-dialog-desc { white-space: pre-line; }
   .dialog-actions { display: flex; justify-content: flex-end; gap: 9px; }
   .dialog-actions .btn { min-width: 88px; }
 
@@ -783,6 +837,12 @@
     .topbar-actions .btn { width: 44px; min-width: 44px; padding: 0; justify-content: center; }
     .topbar-actions .btn-label { display: none; }
     .topbar-actions .btn svg { width: 19px; height: 19px; }
+    .topbar-actions .btn .icon-chevron { display: none; }
+    .export-menu { top: calc(100% + 8px); }
+  }
+
+  @media (max-width: 380px) {
+    .brand-mark { display: none; }
   }
 
   @media (max-width: 380px) {
@@ -824,15 +884,56 @@
         </svg>
         <span class="btn-label">New</span>
       </button>
-      <button id="export-btn" class="btn primary" type="button" aria-label="Export map as PNG" title="Export map as PNG" data-busy="false" aria-busy="false">
-        <svg class="icon-export" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-          <path d="M12 3v11"></path>
-          <path d="m7.5 10.5 4.5 4.5 4.5-4.5"></path>
+      <button id="import-btn" class="btn" type="button" aria-label="Import JSON map" title="Import JSON map">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M12 15.5V4"></path>
+          <path d="m7.5 8.5 4.5-4.5 4.5 4.5"></path>
           <path d="M5 20.5h14"></path>
         </svg>
-        <span class="spinner" aria-hidden="true"></span>
-        <span class="btn-label" id="export-label">Export PNG</span>
+        <span class="btn-label">Import</span>
       </button>
+      <div class="export-wrap">
+        <button id="export-btn" class="btn primary" type="button" aria-label="Export map" title="Export map" aria-haspopup="menu" aria-expanded="false" aria-controls="export-menu" data-busy="false" aria-busy="false">
+          <svg class="icon-export" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="M12 3v11"></path>
+            <path d="m7.5 10.5 4.5 4.5 4.5-4.5"></path>
+            <path d="M5 20.5h14"></path>
+          </svg>
+          <span class="spinner" aria-hidden="true"></span>
+          <span class="btn-label" id="export-label">Export</span>
+          <svg class="icon-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+            <path d="m7 10 5 5 5-5"></path>
+          </svg>
+        </button>
+        <div id="export-menu" class="export-menu" role="menu" aria-label="Export map" hidden>
+          <button type="button" class="export-menu-item" role="menuitem" data-export="jpeg">
+            <span class="export-menu-icon photo" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                <rect x="3.5" y="5" width="17" height="14" rx="2.5"></rect>
+                <circle cx="9" cy="10" r="1.6"></circle>
+                <path d="m5.5 17 4.8-4.8L14 16l2.2-2.2 2.8 2.8"></path>
+              </svg>
+            </span>
+            <span class="export-menu-copy">
+              <strong>JPEG image</strong>
+              <small>Phone-friendly map snapshot</small>
+            </span>
+          </button>
+          <button type="button" class="export-menu-item" role="menuitem" data-export="json">
+            <span class="export-menu-icon json" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                <path d="M6 3.5h8l4 4v13H6z"></path>
+                <path d="M14 3.5v4h4"></path>
+                <path d="M9 12h6M9 15h4"></path>
+              </svg>
+            </span>
+            <span class="export-menu-copy">
+              <strong>JSON project</strong>
+              <small>Backup or transfer the full map</small>
+            </span>
+          </button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -916,6 +1017,7 @@
   </nav>
 
   <div id="toast" role="status" aria-live="polite"></div>
+  <input id="import-file-input" type="file" accept=".json,application/json" hidden>
 
   <dialog id="new-map-dialog" aria-labelledby="new-map-dialog-title" aria-describedby="new-map-dialog-desc">
     <div class="dialog-inner">
@@ -924,6 +1026,17 @@
       <form method="dialog" class="dialog-actions">
         <button type="submit" value="cancel" class="btn">Cancel</button>
         <button type="submit" value="confirm" class="btn danger" id="confirm-new-btn">Reset map</button>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog id="import-dialog" aria-labelledby="import-dialog-title" aria-describedby="import-dialog-desc">
+    <div class="dialog-inner">
+      <h2 id="import-dialog-title">Replace current map?</h2>
+      <p id="import-dialog-desc">Importing this file will replace the current map.</p>
+      <form method="dialog" class="dialog-actions">
+        <button type="submit" value="cancel" class="btn">Cancel</button>
+        <button type="submit" value="confirm" class="btn primary" id="confirm-import-btn">Import map</button>
       </form>
     </div>
   </dialog>
@@ -951,7 +1064,12 @@
     topbar: document.getElementById("topbar"),
     title: document.getElementById("map-title"),
     newBtn: document.getElementById("new-map-btn"),
+    importBtn: document.getElementById("import-btn"),
+    importInput: document.getElementById("import-file-input"),
+    importDialog: document.getElementById("import-dialog"),
+    importDialogDesc: document.getElementById("import-dialog-desc"),
     exportBtn: document.getElementById("export-btn"),
+    exportMenu: document.getElementById("export-menu"),
     exportLabel: document.getElementById("export-label"),
     viewport: document.getElementById("viewport"),
     world: document.getElementById("world"),
@@ -991,6 +1109,7 @@
   let pointers = new Map();
   const touchPoints = new Map();
   let touchPinch = null;
+  let pendingImport = null;
 
   function prefersTouchHints() {
     if (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) return true;
@@ -1727,8 +1846,13 @@
   /* ---------- Selection and UI state ---------- */
 
   function updateToolbar() {
-    dom.addArrowBtn.setAttribute("aria-pressed", ui.mode === "link" ? "true" : "false");
-    dom.viewport.classList.toggle("link-mode", ui.mode === "link");
+    const linking = ui.mode === "link";
+    dom.addArrowBtn.setAttribute("aria-pressed", linking ? "true" : "false");
+    dom.addArrowBtn.setAttribute("aria-label", linking ? "Finish adding arrows" : "Add arrow between cards");
+    dom.addArrowBtn.title = linking ? "Finish adding arrows" : "Add arrow between cards";
+    const arrowLabel = dom.addArrowBtn.querySelector(".tool-label");
+    if (arrowLabel) arrowLabel.textContent = linking ? "Done" : "Add arrow";
+    dom.viewport.classList.toggle("link-mode", linking);
     dom.deleteBtn.disabled = !ui.selectedId;
 
     let label = "Delete selected item";
@@ -1742,7 +1866,9 @@
 
   function updateHint() {
     if (ui.mode === "link") {
-      dom.hint.textContent = ui.linkSourceId ? "Now tap the target card." : "Tap an idea or table to start the arrow.";
+      dom.hint.textContent = ui.linkSourceId
+        ? "Tap target cards · Done to finish."
+        : "Tap a source idea or table.";
       dom.hint.classList.add("active");
     } else {
       dom.hint.textContent = prefersTouchHints() ? "Drag to pan · Pinch to zoom" : "Drag to pan · Ctrl/⌘ + scroll to zoom";
@@ -2172,8 +2298,7 @@
 
     const edge = { id: uid(), from: ui.linkSourceId, to: id };
     doc.edges.push(edge);
-    cancelLinkMode();
-    setSelection(edge.id, "edge");
+    clearSelection();
     scheduleEdgeDraw();
     scheduleSave();
     showToast("Arrow added.", "success");
@@ -2633,7 +2758,14 @@
   /* ---------- Keyboard, title and reset ---------- */
 
   function onKeyDown(event) {
-    if (dom.dialog.open) return;
+    if (event.defaultPrevented) return;
+    if (dom.dialog.open || dom.importDialog.open) return;
+
+    if (event.key === "Escape" && !dom.exportMenu.hidden) {
+      closeExportMenu(true);
+      event.preventDefault();
+      return;
+    }
 
     if (event.key === "Escape") {
       let handled = false;
@@ -2677,6 +2809,7 @@
   }
 
   function openNewMapDialog() {
+    closeExportMenu(false);
     if (typeof dom.dialog.showModal === "function") {
       dom.dialog.returnValue = "cancel";
       dom.dialog.showModal();
@@ -2700,6 +2833,20 @@
     if (event.target === dom.dialog) dom.dialog.close("cancel");
   });
 
+  dom.importBtn.addEventListener("click", function () {
+    dom.importInput.click();
+  });
+  dom.importInput.addEventListener("change", onImportFileChange);
+  dom.importDialog.addEventListener("close", function () {
+    if (dom.importDialog.returnValue === "confirm") {
+      applyImportedDocument(pendingImport);
+    }
+    pendingImport = null;
+  });
+  dom.importDialog.addEventListener("click", function (event) {
+    if (event.target === dom.importDialog) dom.importDialog.close("cancel");
+  });
+
   dom.addBlockBtn.addEventListener("click", function () { addCard("block"); });
   dom.addNoteBtn.addEventListener("click", function () { addCard("annotation"); });
   dom.addTableBtn.addEventListener("click", addTable);
@@ -2710,7 +2857,47 @@
   dom.zoomOut.addEventListener("click", function () { zoomBy(0.8); });
   dom.zoomFit.addEventListener("click", fitToContent);
 
-  dom.exportBtn.addEventListener("click", exportPNG);
+  dom.exportBtn.addEventListener("click", function (event) {
+    event.stopPropagation();
+    toggleExportMenu();
+  });
+  dom.exportMenu.addEventListener("click", function (event) {
+    const item = event.target.closest("[data-export]");
+    if (!item) return;
+    const type = item.dataset.export;
+    closeExportMenu(false);
+    if (type === "jpeg") exportJPEG();
+    else if (type === "json") exportJSON();
+  });
+  dom.exportMenu.addEventListener("keydown", function (event) {
+    const items = Array.prototype.slice.call(dom.exportMenu.querySelectorAll('[role="menuitem"]'));
+    const index = items.indexOf(document.activeElement);
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const delta = event.key === "ArrowDown" ? 1 : -1;
+      const next = (index + delta + items.length) % items.length;
+      items[next].focus();
+    } else if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      items[event.key === "Home" ? 0 : items.length - 1].focus();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      closeExportMenu(true);
+    }
+  });
+  dom.exportMenu.addEventListener("focusout", function () {
+    window.setTimeout(function () {
+      if (dom.exportMenu.hidden) return;
+      if (dom.exportMenu.contains(document.activeElement)) return;
+      if (document.activeElement === dom.exportBtn) return;
+      closeExportMenu(false);
+    }, 0);
+  });
+  document.addEventListener("pointerdown", function (event) {
+    if (dom.exportMenu.hidden) return;
+    if (!event.target.closest(".export-wrap")) closeExportMenu(false);
+  });
 
   dom.viewport.addEventListener("pointerdown", onViewportPointerDown);
   dom.viewport.addEventListener("pointermove", onViewportPointerMove, { passive: false });
@@ -2740,7 +2927,7 @@
     }
   });
 
-  /* ---------- PNG export helpers ---------- */
+  /* ---------- Image export helpers ---------- */
 
   function roundRectPath(ctx, x, y, w, h, radius) {
     const r = Math.max(0, Math.min(radius, w / 2, h / 2));
@@ -3110,7 +3297,7 @@
     ctx.fillText(finalText, 64, titleTop + size / 2);
   }
 
-  function slugifyTitle(title) {
+  function slugifyTitle(title, extension) {
     const normalized = (title || "Untitled Mind Map")
       .normalize("NFKD")
       .replace(/[\u0300-\u036f]/g, "")
@@ -3119,18 +3306,18 @@
       .replace(/^-+|-+$/g, "")
       .slice(0, 60)
       .replace(/-+$/g, "");
-    return (normalized || "mind-map") + ".png";
+    return (normalized || "mind-map") + "." + extension;
   }
 
-  /* ---------- PNG export ---------- */
+  /* ---------- JPEG and JSON export ---------- */
 
   function setExportBusy(busy) {
     dom.exportBtn.disabled = busy;
     dom.exportBtn.dataset.busy = busy ? "true" : "false";
     dom.exportBtn.setAttribute("aria-busy", busy ? "true" : "false");
-    dom.exportBtn.setAttribute("aria-label", busy ? "Exporting map as PNG" : "Export map as PNG");
-    dom.exportBtn.title = busy ? "Exporting map as PNG" : "Export map as PNG";
-    dom.exportLabel.textContent = busy ? "Exporting\u2026" : "Export PNG";
+    dom.exportBtn.setAttribute("aria-label", busy ? "Exporting map" : "Export map");
+    dom.exportBtn.title = busy ? "Exporting map" : "Export map";
+    dom.exportLabel.textContent = busy ? "Exporting\u2026" : "Export";
   }
 
   function renderExportCanvas() {
@@ -3244,20 +3431,20 @@
 
     drawExportTitle(ctx, logicalW, title, titleTop);
 
-    return { canvas: canvas, filename: slugifyTitle(title) };
+    return canvas;
   }
 
-  function canvasToBlob(canvas) {
+  function canvasToBlob(canvas, type, quality) {
     return new Promise(function (resolve, reject) {
       if (typeof canvas.toBlob !== "function") {
-        reject(new Error("PNG encoding is unavailable."));
+        reject(new Error("Image encoding is unavailable."));
         return;
       }
       try {
         canvas.toBlob(function (blob) {
           if (blob) resolve(blob);
-          else reject(new Error("PNG encoding failed."));
-        }, "image/png");
+          else reject(new Error("Image encoding failed."));
+        }, type, quality);
       } catch (err) {
         reject(err);
       }
@@ -3276,8 +3463,46 @@
     window.setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
   }
 
-  async function exportPNG() {
+  function exportJSON() {
+    closeExportMenu();
+    try {
+      const json = JSON.stringify(serializeDocument(), null, 2) + "\n";
+      const blob = new Blob([json], { type: "application/json" });
+      downloadBlob(blob, slugifyTitle(doc.title, "json"));
+      showToast("JSON exported.", "success");
+    } catch (err) {
+      showToast("Could not export the JSON. Please try again.", "error");
+    }
+  }
+
+  async function shareOrDownloadJPEG(blob, filename) {
+    const shareTitle = (doc.title || "").trim() || "Mind Map";
+    const touchDevice = prefersTouchHints() ||
+      (navigator.maxTouchPoints > 0 && window.innerWidth <= 1024);
+
+    if (touchDevice && navigator.share && navigator.canShare) {
+      try {
+        const file = new File([blob], filename, { type: "image/jpeg" });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: shareTitle });
+          showToast("JPEG ready. Choose Save Image or Photos.", "success");
+          return;
+        }
+      } catch (err) {
+        if (err && err.name === "AbortError") {
+          showToast("Export canceled.");
+          return;
+        }
+      }
+    }
+
+    downloadBlob(blob, filename);
+    showToast("JPEG downloaded.", "success");
+  }
+
+  async function exportJPEG() {
     if (ui.isExporting) return;
+    closeExportMenu();
     ui.isExporting = true;
     setExportBusy(true);
 
@@ -3289,15 +3514,110 @@
           /* Continue with system fonts if the font set cannot be awaited. */
         }
       }
-      const output = renderExportCanvas();
-      const blob = await canvasToBlob(output.canvas);
-      downloadBlob(blob, output.filename);
-      showToast("PNG exported.", "success");
+      const canvas = renderExportCanvas();
+      const blob = await canvasToBlob(canvas, "image/jpeg", 0.95);
+      const filename = slugifyTitle(doc.title, "jpg");
+      await shareOrDownloadJPEG(blob, filename);
     } catch (err) {
-      showToast("Could not export the PNG. Please try again.", "error");
+      showToast("Could not export the JPEG. Please try again.", "error");
     } finally {
       ui.isExporting = false;
       setExportBusy(false);
+    }
+  }
+
+  /* ---------- File menu and JSON import ---------- */
+
+  function openExportMenu() {
+    if (ui.isExporting) return;
+    dom.exportMenu.hidden = false;
+    dom.exportBtn.setAttribute("aria-expanded", "true");
+    const first = dom.exportMenu.querySelector('[role="menuitem"]');
+    if (first) first.focus();
+  }
+
+  function closeExportMenu(focusTrigger) {
+    if (dom.exportMenu.hidden) return;
+    dom.exportMenu.hidden = true;
+    dom.exportBtn.setAttribute("aria-expanded", "false");
+    if (focusTrigger) dom.exportBtn.focus({ preventScroll: true });
+  }
+
+  function toggleExportMenu() {
+    if (dom.exportMenu.hidden) openExportMenu();
+    else closeExportMenu(true);
+  }
+
+  function importSummary(restored, filename) {
+    const blocks = restored.doc.blocks.length;
+    const tables = restored.doc.tables.length;
+    const notes = restored.doc.annotations.length;
+    const arrows = restored.doc.edges.length;
+    return 'Replace the current map with "' + filename + '"?\n\n' +
+      blocks + " idea" + (blocks === 1 ? "" : "s") + ", " +
+      tables + " table" + (tables === 1 ? "" : "s") + ", " +
+      notes + " note" + (notes === 1 ? "" : "s") + ", and " +
+      arrows + " arrow" + (arrows === 1 ? "" : "s") + ".";
+  }
+
+  function applyImportedDocument(restored) {
+    if (!restored) return;
+    clearPointerState();
+    cancelLinkMode();
+    clearSelection();
+    doc = restored.doc;
+    dom.title.value = doc.title;
+    applyViewport();
+    renderAllCards();
+    if (restored.needsFit) fitToContent();
+    updateToolbar();
+    updateHint();
+    scheduleSave();
+    showToast("Map imported.", "success");
+  }
+
+  async function onImportFileChange(event) {
+    const input = event.currentTarget;
+    const file = input.files && input.files[0];
+    input.value = "";
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      showToast("That JSON file is too large.", "error");
+      return;
+    }
+
+    let text = "";
+    try {
+      text = await file.text();
+    } catch (err) {
+      showToast("Could not read that JSON file.", "error");
+      return;
+    }
+
+    let parsed = null;
+    try {
+      parsed = JSON.parse(text);
+    } catch (err) {
+      showToast("That file is not valid JSON.", "error");
+      return;
+    }
+
+    const restored = sanitizeDocument(parsed);
+    if (!restored) {
+      showToast("That JSON file is not a valid mind map.", "error");
+      return;
+    }
+
+    pendingImport = restored;
+    dom.importDialogDesc.textContent = importSummary(restored, file.name);
+    if (typeof dom.importDialog.showModal === "function") {
+      dom.importDialog.returnValue = "cancel";
+      dom.importDialog.showModal();
+    } else if (window.confirm(importSummary(restored, file.name))) {
+      applyImportedDocument(restored);
+      pendingImport = null;
+    } else {
+      pendingImport = null;
     }
   }
 
