@@ -282,6 +282,7 @@ const THEMES = {
 };
 
 const LEVEL_KEY='ib-quiz-level';
+const SHOW_UNDERSTANDING_TAGS=false;
 const savedLevel=localStorage.getItem(LEVEL_KEY);
 const state = {
   view:'topics',
@@ -625,6 +626,7 @@ function understandingInfo(q){
   return {primary:tags.primary,codes:tags.codes,bank};
 }
 function understandingSection(q,shown){
+  if(!SHOW_UNDERSTANDING_TAGS) return '';
   const info=understandingInfo(q);
   if(!info) return '';
   const items=info.codes.map(code=>{
