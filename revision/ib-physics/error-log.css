@@ -97,3 +97,24 @@ tr:last-child td{border-bottom:none}
 .rowcheck{width:16px;height:16px;accent-color:var(--brand);cursor:pointer}
 .export-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
 .export-actions .btn{padding:7px 9px;font-size:11px}
+
+/* ---------- topic summary ---------- */
+.topic-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.topic-summary-card{text-align:left;border:1px solid var(--line);border-left:4px solid var(--line);background:#fff;border-radius:11px;padding:10px 11px;min-width:0;transition:.14s}
+.topic-summary-card:hover{border-color:#b9c3da;transform:translateY(-1px)}
+.topic-summary-card.active{border-color:#7f9aff;background:#f1f5ff;box-shadow:0 0 0 2px #dbe6ff inset}
+.topic-summary-card.weakest{border-left-color:var(--bad)}
+.topic-summary-card.needs{border-left-color:var(--warn)}
+.topic-summary-card.clear{border-left-color:var(--ok)}
+.ts-head{display:flex;align-items:center;justify-content:space-between;gap:6px;margin:0 0 4px}
+.ts-code{font-size:10px;font-weight:900;letter-spacing:.6px;color:var(--brand)}
+.ts-badge{font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.4px;border-radius:999px;padding:2px 5px;background:var(--badbg);color:var(--bad);white-space:nowrap}
+.ts-badge.clear{background:var(--okbg);color:var(--ok)}
+.ts-title{font-size:12px;font-weight:800;line-height:1.25;min-height:30px;overflow-wrap:anywhere;margin:0 0 5px}
+.ts-counts{font-size:10px;color:var(--muted);line-height:1.35}.ts-counts b{color:var(--ink)}
+.ts-bar{height:4px;border-radius:99px;background:#e8ecf5;overflow:hidden;margin:7px 0 4px}
+.ts-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--ok),#69c492)}
+.ts-foot{display:flex;justify-content:space-between;gap:5px;flex-wrap:wrap;font-size:9px;color:var(--muted)}
+.ts-practise{color:var(--brand);font-weight:900;white-space:nowrap}
+@media(max-width:900px){.topic-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){.topic-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ts-title{min-height:0}.ts-foot{font-size:8.5px}}

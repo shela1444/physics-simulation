@@ -23,7 +23,8 @@
     qInput: "",
     error: "",
     saved: "",
-    practice: null
+    practice: null,
+    topicFilter: "all"
   };
 
   function esc(v) {
@@ -131,6 +132,52 @@
     finally { btn.disabled = false; btn.textContent = "Sign in"; }
   }
 
+  function topicSummary() {
+    const map = new Map();
+    for (const r of records) {
+      const code = r.topic || "—";
+      let item = map.get(code);
+      if (!item) {
+        item = { code, title: r.topic_title || r.topic || "Unknown topic", total: 0, active: 0, mastered: 0, repeats: 0 };
+        map.set(code, item);
+      }
+      item.total += 1;
+      item.repeats += Number(r.times_logged) || 1;
+      if (r.mastered) item.mastered += 1; else item.active += 1;
+    }
+    return [...map.values()].sort((a, b) =>
+      (b.active - a.active) || (b.total - a.total) || a.code.localeCompare(b.code, undefined, { numeric: true })
+    );
+  }
+  function visibleRecords() {
+    return ui.topicFilter === "all" ? records : records.filter((r) => r.topic === ui.topicFilter);
+  }
+  function setTopicFilter(topic) {
+    ui.topicFilter = topic;
+    selectedIds.clear();
+    render();
+  }
+  function summaryHtml() {
+    const topics = topicSummary();
+    if (!topics.length) return "";
+    const selected = ui.topicFilter !== "all" ? topics.find((t) => t.code === ui.topicFilter) : null;
+    return `<section class="card">
+      <div class="toolbar"><div><h2>Topic summary</h2><p class="sub">Your active errors are ranked first. Click a topic to filter the Error Book.</p></div>
+        <div class="actions-inline">${selected ? `<button class="btn ghost" onclick="setTopicFilter('all')">Show all topics</button>` : ""}</div>
+      </div>
+      <div class="topic-summary-grid">${topics.map((t, i) => {
+        const pct = t.total ? Math.round((t.mastered / t.total) * 100) : 0;
+        const cls = t.active ? (i === 0 ? "weakest" : "needs") : "clear";
+        return `<button type="button" class="topic-summary-card ${cls} ${ui.topicFilter === t.code ? "active" : ""}" onclick="setTopicFilter('${esc(t.code)}')">
+          <div class="ts-head"><span class="ts-code">${esc(t.code)}</span>${i === 0 && t.active ? '<span class="ts-badge">Weakest</span>' : t.active ? "" : '<span class="ts-badge clear">All mastered</span>'}</div>
+          <div class="ts-title">${esc(t.title)}</div>
+          <div class="ts-counts"><b>${t.active}</b> active · <b>${t.total}</b> total · ${t.mastered} mastered</div>
+          <div class="ts-bar"><i style="width:${pct}%"></i></div>
+          <div class="ts-foot"><span>${pct}% mastered</span><span class="ts-practise" onclick="event.stopPropagation();startPractice('${esc(t.code)}')">Practise this topic →</span></div>
+        </button>`;
+      }).join("")}</div>
+    </section>`;
+  }
   function render() {
     if (!auth || auth.status !== "student") { boot(); return; }
     const first = ui.first ? bankQuestion(ui.first.id) : null;
@@ -171,22 +218,24 @@
         </div></div>` : ""}
       </section>
 
+      ${summaryHtml()}
+
       <section class="card">
-        <div class="toolbar"><div><h2>Error history</h2><p class="sub">Select any questions to export as a PDF, or practise all active errors.</p></div>
+        <div class="toolbar"><div><h2>Error history</h2><p class="sub">Select any questions to export as a PDF, or practise the selected topic.</p></div>
         <div class="export-actions">
           <button class="btn ghost" onclick="selectAllRows()">Select all</button>
           <button class="btn ghost" onclick="clearExportSelection()">Clear</button>
           <button class="btn primary" id="exportSelectedBtn" onclick="exportSelectedPdf()" disabled>Export selected PDF (0)</button>
           <button class="btn primary" onclick="startPractice()" ${unresolved.length ? "" : "disabled"}>Practise all active (${unresolved.length})</button>
         </div></div>
-        ${records.length ? renderTable() : `<div class="empty">No errors logged yet.</div>`}
+        ${visibleRecords().length ? renderTable() : `<div class="empty">${ui.topicFilter === "all" ? "No errors logged yet." : "No records in this topic."}</div>`}
       </section>`;
     updateExportButton();
   }
 
   function renderTable() {
     return `<div class="table-wrap"><table><thead><tr><th class="selectcol"></th><th>Source</th><th>MC ID</th><th>Subtopic</th><th>Logged</th><th>Correct</th><th>Status</th></tr></thead><tbody>
-      ${records.map((r) => `<tr><td class="selectcol"><input class="rowcheck" type="checkbox" ${selectedIds.has(r.id) ? "checked" : ""} onchange="toggleExportSelection('${esc(r.id)}', this.checked)" aria-label="Select ${esc(r.mc_id)}"></td><td>${esc(r.source)}</td><td>${esc(r.mc_id)}</td><td>${esc(r.topic)}</td><td>${r.times_logged}×</td><td>${r.practice_correct}/2</td><td><span class="status ${r.mastered ? "mastered" : ""}">${r.mastered ? "Mastered" : "Active"}</span></td></tr>`).join("")}
+      ${visibleRecords().map((r) => `<tr><td class="selectcol"><input class="rowcheck" type="checkbox" ${selectedIds.has(r.id) ? "checked" : ""} onchange="toggleExportSelection('${esc(r.id)}', this.checked)" aria-label="Select ${esc(r.mc_id)}"></td><td>${esc(r.source)}</td><td>${esc(r.mc_id)}</td><td>${esc(r.topic)}</td><td>${r.times_logged}×</td><td>${r.practice_correct}/2</td><td><span class="status ${r.mastered ? "mastered" : ""}">${r.mastered ? "Mastered" : "Active"}</span></td></tr>`).join("")}
     </tbody></table></div>`;
   }
 
@@ -201,7 +250,7 @@
     updateExportButton();
   }
   function selectAllRows() {
-    for (const r of records) selectedIds.add(r.id);
+    for (const r of visibleRecords()) selectedIds.add(r.id);
     render();
   }
   function clearExportSelection() {
@@ -382,17 +431,18 @@
     await loadRecords(); render(); toast("Error logged.");
   }
 
-  function startPractice() {
-    const ids = records.filter((r) => !r.mastered).map((r) => r.id);
-    if (!ids.length) { toast("No active errors to practise."); return; }
-    ui.practice = { ids: shuffle([...new Set(ids)]), index: 0, selected: null, revealed: false, score: 0, total: 0, complete: false };
+  function startPractice(topic = "all") {
+    const pool = topic && topic !== "all" ? records.filter((r) => r.topic === topic) : records;
+    const ids = pool.filter((r) => !r.mastered).map((r) => r.id);
+    if (!ids.length) { toast(topic && topic !== "all" ? "No active errors in this topic." : "No active errors to practise."); return; }
+    ui.practice = { ids: shuffle([...new Set(ids)]), index: 0, selected: null, revealed: false, score: 0, total: 0, complete: false, topic };
     renderPractice();
   }
   function renderPractice() {
     const p = ui.practice;
     if (!p) { render(); return; }
     if (p.complete) {
-      app.innerHTML = `<div class="practice card"><h1>Practice complete</h1><p class="sub">${p.score} correct out of ${p.total}.</p><div class="score">${p.score} / ${p.total}</div><div class="actions-inline"><button class="btn primary" onclick="startPractice()">Practise active again</button><button class="btn ghost" onclick="exitPractice()">Back to error book</button></div></div>`;
+      app.innerHTML = `<div class="practice card"><h1>Practice complete</h1><p class="sub">${p.score} correct out of ${p.total}.</p><div class="score">${p.score} / ${p.total}</div><div class="actions-inline"><button class="btn primary" onclick="startPractice(ui.practice.topic || 'all')">Practise active again</button><button class="btn ghost" onclick="exitPractice()">Back to error book</button></div></div>`;
       return;
     }
     const rec = records.find((r) => r.id === p.ids[p.index]);
@@ -439,6 +489,7 @@
   window.submitLogin = submitLogin;
   window.signOutErrorBook = async function () { try { await QuizAuth.signOut(); } catch (_) {} window.location.reload(); };
   window.bootErrorBook = boot;
+  window.setTopicFilter = setTopicFilter;
   window.setDraft = setDraft;
   window.showFirstQuestion = showFirstQuestion;
   window.confirmPaper = confirmPaper;
