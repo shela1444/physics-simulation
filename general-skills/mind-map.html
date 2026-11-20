@@ -381,6 +381,13 @@
       0 0 0 9px rgba(79, 70, 229, 0.16),
       0 18px 40px -22px rgba(15, 23, 42, 0.5);
   }
+  .card.annotation.link-source {
+    box-shadow:
+      0 0 0 2px var(--amber-bg),
+      0 0 0 5px var(--accent),
+      0 0 0 9px rgba(79, 70, 229, 0.16),
+      0 18px 40px -22px rgba(120, 53, 15, 0.48);
+  }
 
   .card.dragging {
     z-index: 50;
@@ -579,7 +586,9 @@
 
   #viewport.link-mode .card.block,
   #viewport.link-mode .card.table,
+  #viewport.link-mode .card.annotation,
   #viewport.link-mode .card.block .card-text,
+  #viewport.link-mode .card.annotation .card-text,
   #viewport.link-mode .card.table .table-wrap,
   #viewport.link-mode .card.table th,
   #viewport.link-mode .card.table td { cursor: crosshair; }
@@ -593,7 +602,8 @@
 
   @media (hover: hover) {
     #viewport.link-mode .card.block:hover,
-    #viewport.link-mode .card.table:hover {
+    #viewport.link-mode .card.table:hover,
+    #viewport.link-mode .card.annotation:hover {
       box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px rgba(79, 70, 229, 0.5), 0 18px 40px -22px rgba(15, 23, 42, 0.5);
     }
   }
@@ -1146,6 +1156,9 @@
     for (let i = 0; i < doc.tables.length; i += 1) {
       if (doc.tables[i].id === id) return doc.tables[i];
     }
+    for (let i = 0; i < doc.annotations.length; i += 1) {
+      if (doc.annotations[i].id === id) return doc.annotations[i];
+    }
     return null;
   }
 
@@ -1289,6 +1302,7 @@
     const nodeIds = new Set();
     for (let i = 0; i < blocks.length; i += 1) nodeIds.add(blocks[i].id);
     for (let i = 0; i < tables.length; i += 1) nodeIds.add(tables[i].id);
+    for (let i = 0; i < annotations.length; i += 1) nodeIds.add(annotations[i].id);
 
     const edgeIds = new Set();
     const pairs = new Set();
@@ -1868,7 +1882,7 @@
     if (ui.mode === "link") {
       dom.hint.textContent = ui.linkSourceId
         ? "Tap target cards · Done to finish."
-        : "Tap a source idea or table.";
+        : "Tap a source card.";
       dom.hint.classList.add("active");
     } else {
       dom.hint.textContent = prefersTouchHints() ? "Drag to pan · Pinch to zoom" : "Drag to pan · Ctrl/⌘ + scroll to zoom";
@@ -1994,6 +2008,11 @@
       const el = cardEls.get(table.id);
       if (el) dimensions.set(table.id, cardWorldSize(el));
     }
+    for (let i = 0; i < doc.annotations.length; i += 1) {
+      const note = doc.annotations[i];
+      const el = cardEls.get(note.id);
+      if (el) dimensions.set(note.id, cardWorldSize(el));
+    }
 
     for (let i = 0; i < doc.edges.length; i += 1) {
       const edge = doc.edges[i];
@@ -2115,10 +2134,12 @@
       if (ui.linkSourceId === id) setLinkSource(null);
     } else if (kind === "annotation") {
       doc.annotations = doc.annotations.filter(function (a) { return a.id !== id; });
+      doc.edges = doc.edges.filter(function (e) { return e.from !== id && e.to !== id; });
       const el = cardEls.get(id);
       if (el) el.remove();
       cardEls.delete(id);
       cardTextEls.delete(id);
+      if (ui.linkSourceId === id) setLinkSource(null);
     } else if (kind === "edge") {
       doc.edges = doc.edges.filter(function (e) { return e.id !== id; });
     }
@@ -2263,12 +2284,6 @@
   }
 
   function handleLinkTap(kind, id) {
-    if (kind === "annotation") {
-      cancelLinkMode();
-      setSelection(id, kind);
-      return;
-    }
-
     if (!ui.linkSourceId) {
       setLinkSource(id);
       return;
