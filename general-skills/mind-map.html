@@ -2977,6 +2977,7 @@
         padL: 14,
         padR: 14,
         padT: 10,
+        padB: 11,
         contentWidth: CARD_FALLBACK_WIDTH - 30
       };
     }
@@ -2988,6 +2989,7 @@
     const padL = parseFloat(textStyle.paddingLeft) || 14;
     const padR = parseFloat(textStyle.paddingRight) || 14;
     const padT = parseFloat(textStyle.paddingTop) || 10;
+    const padB = parseFloat(textStyle.paddingBottom) || 11;
     const borderWidth = parseFloat(elStyle.borderLeftWidth) || 1;
     const size = cardWorldSize(el);
     const w = size.w;
@@ -3011,7 +3013,8 @@
       padL: padL,
       padR: padR,
       padT: padT,
-      contentWidth: Math.max(10, w - borderWidth * 2 - padL - padR + 2)
+      padB: padB,
+      contentWidth: Math.max(10, w - borderWidth * 2 - padL - padR + 4)
     };
   }
 
@@ -3197,13 +3200,12 @@
     ctx.fillStyle = m.color;
     ctx.font = m.fontStyle + " " + m.fontWeight + " " + m.fontSize + "px " + m.fontFamily;
     ctx.textBaseline = "middle";
-    const lines = wrapCanvasText(ctx, m.item.text, m.contentWidth);
+    const lines = m.exportLines || wrapCanvasText(ctx, m.item.text, m.contentWidth);
     let lineTop = y + bw + m.padT;
     const textX = x + bw + m.padL;
 
     for (let i = 0; i < lines.length; i += 1) {
       const middle = lineTop + m.lineHeight / 2;
-      if (middle > y + h) break;
       ctx.fillText(lines[i], textX, middle);
       lineTop += m.lineHeight;
     }
@@ -3335,6 +3337,23 @@
     dom.exportLabel.textContent = busy ? "Exporting\u2026" : "Export";
   }
 
+  function prepareExportTextMetrics(metrics) {
+    const measureCanvas = document.createElement("canvas");
+    const measureCtx = measureCanvas.getContext("2d");
+    if (!measureCtx) return;
+
+    for (let i = 0; i < metrics.length; i += 1) {
+      const m = metrics[i];
+      if (m.kind !== "block" && m.kind !== "annotation") continue;
+      measureCtx.font = m.fontStyle + " " + m.fontWeight + " " + m.fontSize + "px " + m.fontFamily;
+      const lines = wrapCanvasText(measureCtx, m.item.text, m.contentWidth);
+      m.exportLines = lines;
+      const requiredHeight = m.borderWidth * 2 + m.padT + m.padB +
+        lines.length * m.lineHeight + 2;
+      if (requiredHeight > m.h) m.h = requiredHeight;
+    }
+  }
+
   function renderExportCanvas() {
     const metrics = [];
     for (let i = 0; i < doc.blocks.length; i += 1) {
@@ -3346,6 +3365,7 @@
     for (let i = 0; i < doc.annotations.length; i += 1) {
       metrics.push(getCardMetrics(doc.annotations[i], "annotation"));
     }
+    prepareExportTextMetrics(metrics);
 
     const hasItems = metrics.length > 0;
     const padding = 64;
